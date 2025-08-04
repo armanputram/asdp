@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('feedback', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('perangkat_id')->constrained('perangkat')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->boolean('status_foto_required')->default(false);
+            $table->string('foto')->nullable();
+            $table->text('komentar')->nullable();
             $table->timestamps();
         });
     }
