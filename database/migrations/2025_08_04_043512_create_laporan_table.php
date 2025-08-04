@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('laporan', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('feedback_id')->constrained('feedback')->cascadeOnDelete();
+            $table->string('file_path', 255);
             $table->timestamps();
         });
     }

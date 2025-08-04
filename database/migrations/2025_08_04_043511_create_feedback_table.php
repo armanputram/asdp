@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->boolean('status_foto_required')->default(false);
             $table->string('foto')->nullable();
-            $table->text('komentar')->nullable();
+            $table->text('feedback_text')->nullable();
             $table->timestamps();
         });
     }
