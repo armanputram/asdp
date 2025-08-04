@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('perangkat', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('layanan_id')->constrained('layanan')->cascadeOnDelete();
+            $table->string('nama');
+            $table->integer('qty');
             $table->timestamps();
         });
     }
