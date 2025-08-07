@@ -16,6 +16,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Textarea;
 
 
 
@@ -56,6 +57,11 @@ class LayananResource extends Resource
                 ->schema([
                     TextInput::make('nama')->label('Nama Perangkat')->required(),
                     TextInput::make('qty')->label('Jumlah')->numeric()->required(),
+
+                    Textarea::make('keterangan')->label('Keterangan')->nullable()
+                    ->rows(18)
+                    ->cols(20)
+                    ->columnSpanFull(),
                 ])
                 ->collapsible()
                 ->defaultItems(1)

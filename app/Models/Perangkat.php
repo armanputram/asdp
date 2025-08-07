@@ -15,6 +15,7 @@ class Perangkat extends Model
         'layanan_id',
         'nama',
         'qty',
+        'keterangan',
     ];
 
         public function layanan()

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('layanan_id')->constrained('layanan')->cascadeOnDelete();
             $table->string('nama');
             $table->integer('qty');
+            $table->string('keterangan')->nullable();
             $table->timestamps();
         });
     }
