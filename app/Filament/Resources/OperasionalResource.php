@@ -6,7 +6,6 @@ use App\Models\Pelabuhan;
 use App\Models\Layanan;
 use App\Models\Perangkat;
 use App\Filament\Resources\OperasionalResource\Pages;
-use App\Filament\Resources\OperasionalResource\RelationManagers;
 use App\Models\Operasional;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -21,6 +20,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
+
 
 
 
@@ -116,4 +116,9 @@ public static function form(Form $form): Form
             'edit' => Pages\EditOperasional::route('/{record}/edit'),
         ];
     }
+    public static function shouldRegisterNavigation(): bool
+{
+    return auth()->user()->can('view_any_operasional');
+}
+
 }

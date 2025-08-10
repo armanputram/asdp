@@ -41,7 +41,7 @@ class PelabuhanResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('nama')->label('Nama Pelabuhan')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('cabang.nama')->label('Cabang'),
-                
+
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -66,4 +66,9 @@ class PelabuhanResource extends Resource
             'edit' => Pages\EditPelabuhan::route('/{record}/edit'),
         ];
     }
+    public static function shouldRegisterNavigation(): bool
+{
+    return auth()->user()->can('view_any_pelabuhan');
+}
+
 }

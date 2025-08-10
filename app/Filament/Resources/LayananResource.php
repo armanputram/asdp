@@ -110,4 +110,9 @@ class LayananResource extends Resource
             'edit' => Pages\EditLayanan::route('/{record}/edit'),
         ];
     }
+    public static function shouldRegisterNavigation(): bool
+{
+    return auth()->user()->can('view_any_layanan');
+}
+
 }
