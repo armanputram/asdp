@@ -46,4 +46,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    public function operasional()
+{
+    return $this->hasMany(Operasional::class);
+}
+    
 }
