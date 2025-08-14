@@ -35,7 +35,8 @@ class CabangResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nama')
+                Tables\Columns\TextColumn::make('nama'),
+                Tables\Columns\TextColumn::make('created_at')->dateTime()
                     ->searchable()
             ])
             ->filters([

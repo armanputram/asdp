@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\OperasionalResource\Pages;
 use App\Models\Operasional;
 use App\Models\Perangkat;
+use App\Models\Layanan;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -17,8 +18,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Model;
-
 
 class OperasionalResource extends Resource
 {
@@ -30,53 +31,84 @@ class OperasionalResource extends Resource
     {
         return $form
             ->schema([
+                // Pilih cabang
                 Forms\Components\Select::make('cabang_id')
                     ->relationship('cabang', 'nama')
                     ->required()
                     ->reactive(),
 
+                // Pilih pelabuhan
                 Forms\Components\Select::make('pelabuhan_id')
                     ->relationship('pelabuhan', 'nama')
                     ->required()
                     ->reactive(),
 
+                // Pilih layanan (terfilter)
                 Forms\Components\Select::make('layanan_id')
-                    ->relationship('layanan', 'nama')
+                    ->label('Layanan')
+                    ->options(function (callable $get) {
+                        $cabangId = $get('cabang_id');
+                        $pelabuhanId = $get('pelabuhan_id');
+
+                        if (!$cabangId || !$pelabuhanId) {
+                            return [];
+                        }
+
+                        return Layanan::where('cabang_id', $cabangId)
+                            ->where('pelabuhan_id', $pelabuhanId)
+                            ->pluck('nama', 'id');
+                    })
                     ->required()
                     ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set) {
-                        // Ambil semua perangkat berdasarkan layanan
-                        $perangkatList = Perangkat::where('layanan_id', $state)->get();
+                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                        $cabangId = $get('cabang_id');
+                        $pelabuhanId = $get('pelabuhan_id');
 
-                        $items = [];
-                        foreach ($perangkatList as $p) {
-                            $items[] = [
-                                'perangkat_id' => $p->id,
-                                'nama' => $p->nama,
-                                'qty' => $p->qty,
-                                'status_perangkat' => null,
-                                'foto' => null,
-                                'catatan' => null,
-                                'tanggal' => now()->toDateString(),
-                                'waktu' => now()->format('H:i'),
-                            ];
+                        // Ambil perangkat berdasarkan cabang, pelabuhan, dan layanan
+                        if ($cabangId && $pelabuhanId && $state) {
+                            $perangkatList = Perangkat::where('cabang_id', $cabangId)
+                                ->where('pelabuhan_id', $pelabuhanId)
+                                ->where('layanan_id', $state)
+                                ->get();
+
+                            $items = [];
+                            foreach ($perangkatList as $p) {
+                                $items[] = [
+                                    'perangkat_id' => $p->id,
+                                    'nama' => $p->nama,
+                                    'qty' => $p->qty,
+                                    'status_perangkat' => null,
+                                    'foto' => null,
+                                    'catatan' => null,
+                                    'tanggal' => now()->toDateString(),
+                                    'waktu' => now()->format('H:i'),
+                                ];
+                            }
+                            $set('items', $items);
                         }
-                        $set('items', $items);
                     }),
 
+                // Repeater items
                 Repeater::make('items')
                     ->schema([
                         Select::make('perangkat_id')
                             ->label('Nama Perangkat')
-                            ->options(\App\Models\Perangkat::pluck('nama', 'id'))
+                            ->options(function (callable $get) {
+                                $cabangId = $get('../../cabang_id');
+                                $pelabuhanId = $get('../../pelabuhan_id');
+                                $layananId = $get('../../layanan_id');
+
+                                if (!$cabangId || !$pelabuhanId || !$layananId) {
+                                    return [];
+                                }
+
+                                return Perangkat::where('cabang_id', $cabangId)
+                                    ->where('pelabuhan_id', $pelabuhanId)
+                                    ->where('layanan_id', $layananId)
+                                    ->pluck('nama', 'id');
+                            })
                             ->searchable()
                             ->required(),
-
-                        // TextInput::make('qty')
-                        //     ->label('Qty (Master)')
-                        //     ->numeric()
-                        //     ->default(1)
-                        //     ->required(),
 
                         TextInput::make('qty_check')
                             ->label('Qty Check')
@@ -98,14 +130,9 @@ class OperasionalResource extends Resource
 
                         Textarea::make('catatan'),
 
-                        DatePicker::make('tanggal')
-                            ->required(),
-
-                        TimePicker::make('waktu')
-                            ->default(now()->format('H:i'))
-                        ->required(),
+                        DatePicker::make('tanggal')->required(),
+                        TimePicker::make('waktu')->required(),
                     ])
-
                     ->columns(2),
             ]);
     }
@@ -114,13 +141,23 @@ class OperasionalResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')->label('User'),
-                Tables\Columns\TextColumn::make('cabang.nama')->label('Cabang'),
-                Tables\Columns\TextColumn::make('pelabuhan.nama')->label('Pelabuhan'),
-                Tables\Columns\TextColumn::make('layanan.nama')->label('Layanan'),
+                Tables\Columns\TextColumn::make('user.name')->label('User') ->searchable(),
+                Tables\Columns\TextColumn::make('cabang.nama')->label('Cabang') ->searchable(),
+                Tables\Columns\TextColumn::make('pelabuhan.nama')->label('Pelabuhan') ->searchable(),
+                Tables\Columns\TextColumn::make('layanan.nama')->label('Layanan') ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')->dateTime(),
-            ]);
-    }
+                ])
+                ->actions([
+                    Tables\Actions\EditAction::make(),
+                ])
+                    ->headerActions([
+                        Action::make('exportPdf')
+                            ->label('Export PDF')
+                            ->url(route('laporan.operasional.pdf'))
+                            ->openUrlInNewTab(),
+
+                    ]);
+        }
 
     public static function getPages(): array
     {

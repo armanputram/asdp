@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('perangkat', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('cabang_id')->constrained('cabang')->cascadeOnDelete();
+            $table->foreignId('pelabuhan_id')->constrained('pelabuhan')->cascadeOnDelete();
             $table->foreignId('layanan_id')->constrained('layanan')->cascadeOnDelete();
             $table->string('nama');
             $table->integer('qty');

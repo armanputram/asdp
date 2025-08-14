@@ -17,6 +17,7 @@ class Operasional extends Model
         'pelabuhan_id',
         'layanan_id',
     ];
+    
 
     public function items()
     {

@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\LayananResource\Pages;
 use App\Filament\Resources\LayananResource\RelationManagers;
 use App\Models\Layanan;
+use App\Models\Perangkat;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -100,7 +101,7 @@ class LayananResource extends Resource
         return [
             //
         ];
-    }
+    }   
 
     public static function getPages(): array
     {
@@ -111,8 +112,20 @@ class LayananResource extends Resource
         ];
     }
     public static function shouldRegisterNavigation(): bool
-{
-    return auth()->user()->can('view_any_layanan');
-}
+    {
+        return auth()->user()->can('view_any_layanan');
+    }
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        // Ambil layanan berdasarkan ID yang dipilih
+        $layanan = \App\Models\Layanan::findOrFail($data['layanan_id']);
+
+        // Ambil cabang_id & pelabuhan_id dari layanan
+        $data['cabang_id'] = $layanan->cabang_id;
+        $data['pelabuhan_id'] = $layanan->pelabuhan_id;
+
+        return $data;
+    }
+
 
 }
