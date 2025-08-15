@@ -34,6 +34,7 @@ return new class extends Migration {
         $table->text('catatan')->nullable();
         $table->date('tanggal');
         $table->time('waktu');
+         $table->softDeletes();
 
         $table->timestamps();
 

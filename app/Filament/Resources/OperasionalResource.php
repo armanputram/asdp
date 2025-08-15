@@ -137,27 +137,27 @@ class OperasionalResource extends Resource
             ]);
     }
 
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('user.name')->label('User') ->searchable(),
-                Tables\Columns\TextColumn::make('cabang.nama')->label('Cabang') ->searchable(),
-                Tables\Columns\TextColumn::make('pelabuhan.nama')->label('Pelabuhan') ->searchable(),
-                Tables\Columns\TextColumn::make('layanan.nama')->label('Layanan') ->searchable(),
-                Tables\Columns\TextColumn::make('created_at')->dateTime(),
-                ])
-                ->actions([
-                    Tables\Actions\EditAction::make(),
-                ])
-                    ->headerActions([
-                        Action::make('exportPdf')
-                            ->label('Export PDF')
-                            ->url(route('laporan.operasional.pdf'))
-                            ->openUrlInNewTab(),
+public static function table(Table $table): Table
+{
+    return $table
+        ->columns([
+            Tables\Columns\TextColumn::make('user.name')->label('User')->searchable(),
+            Tables\Columns\TextColumn::make('cabang.nama')->label('Cabang')->searchable(),
+            Tables\Columns\TextColumn::make('pelabuhan.nama')->label('Pelabuhan')->searchable(),
+            Tables\Columns\TextColumn::make('layanan.nama')->label('Layanan')->searchable(),
+            Tables\Columns\TextColumn::make('created_at')->dateTime(),
+        ])
+        ->actions([
+            Tables\Actions\EditAction::make(),
 
-                    ]);
-        }
+            Tables\Actions\Action::make('exportPdf')
+                ->label('Export PDF')
+                ->icon('heroicon-o-document-arrow-down')
+                ->url(fn (Model $record) => route('laporan.operasional.pdf', $record->id))
+                ->openUrlInNewTab(),
+        ]);
+}
+
 
     public static function getPages(): array
     {
