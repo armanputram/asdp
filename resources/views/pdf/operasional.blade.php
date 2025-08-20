@@ -14,7 +14,7 @@
         .header-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 2px;
+            /* margin-bottom: 2px; */
         }
         .header-table td {
             border: 1px solid #000;
@@ -32,11 +32,12 @@
             font-weight: bold;
             font-size: 11px;
             padding: 8px 4px;
+
         }
         .doc-info {
-            width: 140px;
+            width: 290px;
             font-size: 8px;
-            line-height: 1.2;
+            line-height: 1.7;
             vertical-align: middle;
         }
         .info-header {
@@ -49,7 +50,7 @@
         .info-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 5px;
+            /* margin-bottom: 5px; */
         }
         .info-table td {
             border: 1px solid #000;
@@ -57,10 +58,23 @@
             font-size: 8px;
             height: 18px;
         }
+         .info-tables {
+            width: 100%;
+            border-collapse: collapse;
+
+            /* margin-bottom: 5px; */
+        }
+          .info-tables td {
+            border: 1px solid #000;
+            padding: 2px 4px;
+            font-size: 8px;
+            height: 18px;
+             background: #c6c6c6;
+        }
         .main-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            /* margin-bottom: 10px; */
         }
         .main-table th, .main-table td {
             border: 1px solid #000;
@@ -130,7 +144,7 @@
     <!-- Header -->
     <table class="header-table">
         <tr>
-            <td class="logo-cell" rowspan="2">
+            <td class="logo-cell" rowspan="1">
                 <img src="{{ public_path('logo/ASDP_Logo_2023.png') }}" alt="Logo ASDP" style="height: 50px;">
             </td>
             <td class="title-cell">
@@ -138,32 +152,48 @@
                 E-TICKETING
             </td>
             <td class="doc-info">
-                <strong>No. Dokumen:</strong> TIF-001-50.01<br>
+                <strong>No. Dokumen :</strong> TIF-001-50.01<br>
                 <strong>Revisi:</strong> 00<br>
                 <strong>Berlaku Efektif:</strong> 01 Mei 2020<br>
                 <strong>Halaman:</strong> 1 dari 1
             </td>
         </tr>
-        <tr>
+
+    </table>
+    <table class=" info-tables">
+         <tr>
             <td colspan="2" class="info-header">
                 INFORMASI DATA
             </td>
-        </tr>
-    </table>
+        </tr></table>
 
     <!-- Info Data -->
     <table class="info-table">
         <tr>
-            <td style="width: 8%; font-weight: bold;">Cabang</td>
-            <td style="width: 17%;">{{ $operasional->cabang->nama ?? 'Ketapang' }}</td>
-            <td style="width: 8%; font-weight: bold;">Pelabuhan</td>
-            <td style="width: 17%;">{{ $operasional->pelabuhan->nama ?? 'Ketapang' }}</td>
-            <td style="width: 8%; font-weight: bold;">Tanggal</td>
-            <td style="width: 17%;">{{ $tanggal ?? 'Rabu, Agustus 06, 2023' }}</td>
-            <td style="width: 8%; font-weight: bold;">Paket</td>
-            <td style="width: 17%;">{{ $paket ?? '10:00' }}</td>
+            <td style="width: 4%; font-weight: bold;">Cabang</td>
+            <td style="width: 30%;">{{ $operasional->cabang->nama ?? 'Ketapang' }}</td>
+
+            <td style="width: 7%; font-weight: bold;">Tanggal</td>
+            <td style="width: 7%;">{{ $tanggal ?? 'Rabu, Agustus 06, 2023' }}</td>
         </tr>
     </table>
+     <table class="info-table">
+        <tr>
+            <td style="width: 4%; font-weight: bold;">Pelabuhan</td>
+            <td style="width: 30%;">{{ $operasional->Pelabuhan->nama ?? 'Ketapang' }}</td>
+
+            <td style="width: 7%; font-weight: bold;">Pukul</td>
+            <td style="width: 7%;">{{ $waktu ?? '10:00' }}</td>
+        </tr>
+    </table>
+        <table class="info-tables">
+         <tr>
+            <td colspan="2" class="info-header">
+                LOKET PEJALAN KAKI
+            </td>
+        </tr></table>
+
+
 
     <!-- Section 1: Loket Penjualan Kaki -->
     <table class="main-table">
@@ -172,7 +202,7 @@
                 <th rowspan="2" class="no-col">No</th>
                 <th rowspan="2" class="perangkat-col">Perangkat</th>
                 <th rowspan="2" class="qty-col">Qty<br>(Unit)</th>
-                <th colspan="5" class="section-header">LOKET PENJUALAN KAKI</th>
+                <th colspan="5" class="section-header">LOKASI</th>
                 <th rowspan="2" class="keterangan-col">Keterangan</th>
                 <th rowspan="2" class="catatan-col">Catatan</th>
                 <th rowspan="2" class="doc-col">Dokumentasi</th>
@@ -183,6 +213,7 @@
                 <th class="check-cols">3</th>
                 <th class="check-cols">4</th>
                 <th class="check-cols">5</th>
+
             </tr>
         </thead>
         <tbody>
@@ -218,23 +249,25 @@
             @endforeach
         </tbody>
     </table>
-
+    <table class=" info-tables">
+         <tr>
+            <td colspan="2" class="info-header">
+                TOLGATE (JR4, TRI CH, LCM)
+            </td>
+        </tr></table>
     <!-- Section 2: Tolgate -->
     <table class="main-table">
         <thead>
-            <tr>
-                <th rowspan="3" class="no-col">No</th>
-                <th rowspan="3" class="perangkat-col">Perangkat</th>
-                <th rowspan="3" class="qty-col">Qty<br>(Unit)</th>
-                <th colspan="9" class="section-header">TOLGATE (JR4, TRI CH, LCM)</th>
-                <th rowspan="3" class="keterangan-col">Keterangan</th>
-                <th rowspan="3" class="catatan-col">Catatan</th>
-                <th rowspan="3" class="doc-col">Dokumentasi</th>
-            </tr>
-            <tr>
+          <tr>
+                <th rowspan="2" class="no-col">No</th>
+                <th rowspan="2" class="perangkat-col">Perangkat</th>
+                <th rowspan="2" class="qty-col">Qty<br>(Unit)</th>
                 <th colspan="4" class="track-header">Track</th>
                 <th colspan="4" class="track-header">KK</th>
-                <th rowspan="2" class="track-header">LCM</th>
+                <th colspan="1" class="track-header">LCM</th>
+                <th rowspan="2" class="keterangan-col">Keterangan</th>
+                <th rowspan="2" class="catatan-col">Catatan</th>
+                <th rowspan="2" class="doc-col">Dokumentasi</th>
             </tr>
             <tr>
                 <th class="check-cols">1</th>
@@ -245,6 +278,7 @@
                 <th class="check-cols">6</th>
                 <th class="check-cols">7</th>
                 <th class="check-cols">8</th>
+                <th class="check-cols">9</th>
             </tr>
         </thead>
         <tbody>
