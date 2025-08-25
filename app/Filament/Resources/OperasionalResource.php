@@ -111,14 +111,14 @@ class OperasionalResource extends Resource
                             ->required(),
 
                         TextInput::make('qty_check')
-                            ->label('Qty Check')
+                            ->label('Lokasi check')
                             ->numeric()
                             ->default(0)
                             ->required(),
 
                         Select::make('status_perangkat')
                             ->options([
-                                'bagus' => 'Bagus',
+                                'baik' => 'Baik',
                                 'rusak' => 'Rusak',
                             ])
                             ->required(),
@@ -137,26 +137,40 @@ class OperasionalResource extends Resource
             ]);
     }
 
-public static function table(Table $table): Table
-{
-    return $table
-        ->columns([
-            Tables\Columns\TextColumn::make('user.name')->label('User')->searchable(),
-            Tables\Columns\TextColumn::make('cabang.nama')->label('Cabang')->searchable(),
-            Tables\Columns\TextColumn::make('pelabuhan.nama')->label('Pelabuhan')->searchable(),
-            Tables\Columns\TextColumn::make('layanan.nama')->label('Layanan')->searchable(),
-            Tables\Columns\TextColumn::make('created_at')->dateTime(),
-        ])
-        ->actions([
-            Tables\Actions\EditAction::make(),
+  public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('user.name')->label('User')->searchable(),
+                Tables\Columns\TextColumn::make('cabang.nama')->label('Cabang')->searchable(),
+                Tables\Columns\TextColumn::make('pelabuhan.nama')->label('Pelabuhan')->searchable(),
+                Tables\Columns\TextColumn::make('layanan.nama')->label('Layanan')->searchable(),
+                Tables\Columns\TextColumn::make('tanggal')
+                    ->label('Tanggal')
+                    ->getStateUsing(function (Model $record) {
+                        $firstItem = $record->items()->first();
+                        return $firstItem ? $firstItem->tanggal->format('d/m/Y') : 'Tidak ada data';
+                    })
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('waktu')
+                    ->label('Waktu')
+                    ->getStateUsing(function (Model $record) {
+                        $firstItem = $record->items()->first();
+                        return $firstItem ? $firstItem->waktu->format('H:i') : 'Tidak ada data';
+                    })
+                    ->searchable(),
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->actions([
+                Tables\Actions\EditAction::make(),
 
-            Tables\Actions\Action::make('exportPdf')
-                ->label('Export PDF')
-                ->icon('heroicon-o-document-arrow-down')
-                ->url(fn (Model $record) => route('laporan.operasional.pdf', $record->id))
-                ->openUrlInNewTab(),
-        ]);
-}
+                Tables\Actions\Action::make('exportPdf')
+                    ->label('Export PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->url(fn (Model $record) => route('laporan.operasional.pdf', $record->id))
+                    ->openUrlInNewTab(),
+            ]);
+    }
 
 
     public static function getPages(): array
