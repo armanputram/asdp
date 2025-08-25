@@ -1,112 +1,177 @@
 <?php
 
 namespace App\Filament\Resources;
-use App\Models\Cabang;
-use App\Models\Pelabuhan;
-use App\Models\Layanan;
-use App\Models\Perangkat;
+
 use App\Filament\Resources\OperasionalResource\Pages;
 use App\Models\Operasional;
+use App\Models\Perangkat;
+use App\Models\Layanan;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TimePicker;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\TimePicker;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Hidden;
-
-
-
+use Filament\Tables\Actions\Action;
+use Illuminate\Database\Eloquent\Model;
 
 class OperasionalResource extends Resource
 {
     protected static ?string $model = Operasional::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cpu-chip';
-    protected static ?string $navigationGroup = 'Teknisi';
+    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document';
 
-public static function form(Form $form): Form
-{
-    return $form
-        ->schema([
-            Hidden::make('user_id')
-                ->default(auth()->id()),
-            Select::make('cabang_id')
-                ->label('Cabang')
-                ->options(Cabang::all()->pluck('nama', 'id'))
-                ->reactive()
-                ->afterStateUpdated(fn (callable $set) => $set('pelabuhan_id', null)),
-
-            Select::make('pelabuhan_id')
-                ->label('Pelabuhan')
-                ->options(fn (callable $get) =>
-                    Pelabuhan::where('cabang_id', $get('cabang_id'))->pluck('nama', 'id'))
-                ->reactive()
-                ->afterStateUpdated(fn (callable $set) => $set('layanan_id', null)),
-
-            Select::make('layanan_id')
-                ->label('Jenis Layanan')
-                ->options(fn (callable $get) =>
-                    Layanan::where('pelabuhan_id', $get('pelabuhan_id'))->pluck('nama', 'id'))
-                ->reactive()
-                ->afterStateUpdated(fn (callable $set) => $set('perangkat_id', null)),
-
-            Select::make('perangkat_id')
-                ->label('Perangkat')
-                ->options(fn (callable $get) =>
-                    Perangkat::where('layanan_id', $get('layanan_id'))->pluck('nama', 'id'))
-                ->required(),
-
-            DatePicker::make('tanggal')->label('Tanggal')->required(),
-            TimePicker::make('waktu')->label('Waktu')->required(),
-
-            Select::make('status')
-                ->label('Status')
-                ->options([
-                    'bagus' => 'Bagus',
-                    'rusak' => 'Rusak',
-                ])
-                ->required(),
-
-            Textarea::make('catatan')->label('Catatan'),
-           FileUpload::make('foto')
-            ->label('Bukti Foto')
-            ->image()
-        ]);
-}
-
-    public static function table(Table $table): Table
+    public static function form(Form $form): Form
     {
-        return $table
-            ->columns([
-                //
+        return $form
+            ->schema([
+                // Pilih cabang
+                Forms\Components\Select::make('cabang_id')
+                    ->relationship('cabang', 'nama')
+                    ->required()
+                    ->reactive(),
 
-            ])
-            ->filters([
-                //
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                // Pilih pelabuhan
+                Forms\Components\Select::make('pelabuhan_id')
+                    ->relationship('pelabuhan', 'nama')
+                    ->required()
+                    ->reactive(),
+
+                // Pilih layanan (terfilter)
+                Forms\Components\Select::make('layanan_id')
+                    ->label('Layanan')
+                    ->options(function (callable $get) {
+                        $cabangId = $get('cabang_id');
+                        $pelabuhanId = $get('pelabuhan_id');
+
+                        if (!$cabangId || !$pelabuhanId) {
+                            return [];
+                        }
+
+                        return Layanan::where('cabang_id', $cabangId)
+                            ->where('pelabuhan_id', $pelabuhanId)
+                            ->pluck('nama', 'id');
+                    })
+                    ->required()
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                        $cabangId = $get('cabang_id');
+                        $pelabuhanId = $get('pelabuhan_id');
+
+                        // Ambil perangkat berdasarkan cabang, pelabuhan, dan layanan
+                        if ($cabangId && $pelabuhanId && $state) {
+                            $perangkatList = Perangkat::where('cabang_id', $cabangId)
+                                ->where('pelabuhan_id', $pelabuhanId)
+                                ->where('layanan_id', $state)
+                                ->get();
+
+                            $items = [];
+                            foreach ($perangkatList as $p) {
+                                $items[] = [
+                                    'perangkat_id' => $p->id,
+                                    'nama' => $p->nama,
+                                    'qty' => $p->qty,
+                                    'status_perangkat' => null,
+                                    'foto' => null,
+                                    'catatan' => null,
+                                    'tanggal' => now()->toDateString(),
+                                    'waktu' => now()->format('H:i'),
+                                ];
+                            }
+                            $set('items', $items);
+                        }
+                    }),
+
+                // Repeater items
+                Repeater::make('items')
+                    ->schema([
+                        Select::make('perangkat_id')
+                            ->label('Nama Perangkat')
+                            ->options(function (callable $get) {
+                                $cabangId = $get('../../cabang_id');
+                                $pelabuhanId = $get('../../pelabuhan_id');
+                                $layananId = $get('../../layanan_id');
+
+                                if (!$cabangId || !$pelabuhanId || !$layananId) {
+                                    return [];
+                                }
+
+                                return Perangkat::where('cabang_id', $cabangId)
+                                    ->where('pelabuhan_id', $pelabuhanId)
+                                    ->where('layanan_id', $layananId)
+                                    ->pluck('nama', 'id');
+                            })
+                            ->searchable()
+                            ->required(),
+
+                        TextInput::make('qty_check')
+                            ->label('Lokasi check')
+                            ->numeric()
+                            ->default(0)
+                            ->required(),
+
+                        Select::make('status_perangkat')
+                            ->options([
+                                'baik' => 'Baik',
+                                'rusak' => 'Rusak',
+                            ])
+                            ->required(),
+
+                        FileUpload::make('foto')
+                            ->directory('operasionals')
+                            ->image()
+                            ->nullable(),
+
+                        Textarea::make('catatan'),
+
+                        DatePicker::make('tanggal')->required(),
+                        TimePicker::make('waktu')->required(),
+                    ])
+                    ->columns(2),
             ]);
     }
 
-    public static function getRelations(): array
+  public static function table(Table $table): Table
     {
-        return [
-            //
-        ];
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('user.name')->label('User')->searchable(),
+                Tables\Columns\TextColumn::make('cabang.nama')->label('Cabang')->searchable(),
+                Tables\Columns\TextColumn::make('pelabuhan.nama')->label('Pelabuhan')->searchable(),
+                Tables\Columns\TextColumn::make('layanan.nama')->label('Layanan')->searchable(),
+                Tables\Columns\TextColumn::make('tanggal')
+                    ->label('Tanggal')
+                    ->getStateUsing(function (Model $record) {
+                        $firstItem = $record->items()->first();
+                        return $firstItem ? $firstItem->tanggal->format('d/m/Y') : 'Tidak ada data';
+                    })
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('waktu')
+                    ->label('Waktu')
+                    ->getStateUsing(function (Model $record) {
+                        $firstItem = $record->items()->first();
+                        return $firstItem ? $firstItem->waktu->format('H:i') : 'Tidak ada data';
+                    })
+                    ->searchable(),
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->actions([
+                Tables\Actions\EditAction::make(),
+
+                Tables\Actions\Action::make('exportPdf')
+                    ->label('Export PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->url(fn (Model $record) => route('laporan.operasional.pdf', $record->id))
+                    ->openUrlInNewTab(),
+            ]);
     }
+
 
     public static function getPages(): array
     {
@@ -116,9 +181,4 @@ public static function form(Form $form): Form
             'edit' => Pages\EditOperasional::route('/{record}/edit'),
         ];
     }
-    public static function shouldRegisterNavigation(): bool
-{
-    return auth()->user()->can('view_any_operasional');
-}
-
 }

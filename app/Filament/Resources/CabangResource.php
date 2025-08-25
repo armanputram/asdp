@@ -35,7 +35,8 @@ class CabangResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nama')
+                Tables\Columns\TextColumn::make('nama'),
+                Tables\Columns\TextColumn::make('created_at')->dateTime()
                     ->searchable()
             ])
             ->filters([
@@ -45,9 +46,9 @@ class CabangResource extends Resource
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
+
                     Tables\Actions\DeleteBulkAction::make(),
-                ]),
+            
             ]);
     }
 
