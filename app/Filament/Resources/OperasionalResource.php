@@ -6,6 +6,7 @@ use App\Filament\Resources\OperasionalResource\Pages;
 use App\Models\Operasional;
 use App\Models\Perangkat;
 use App\Models\Layanan;
+use App\Models\Pelabuhan;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -20,6 +21,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
 
 class OperasionalResource extends Resource
 {
@@ -108,13 +110,15 @@ class OperasionalResource extends Resource
                                     ->pluck('nama', 'id');
                             })
                             ->searchable()
-                            ->required(),
+                            ->required()
+                            ->reactive(),
 
                         TextInput::make('qty_check')
                             ->label('Lokasi check')
                             ->numeric()
                             ->default(0)
-                            ->required(),
+                            ->required()
+                            ->reactive(),
 
                         Select::make('status_perangkat')
                             ->options([
@@ -126,7 +130,37 @@ class OperasionalResource extends Resource
                         FileUpload::make('foto')
                             ->directory('operasionals')
                             ->image()
-                            ->nullable(),
+                            ->nullable()
+                            ->getUploadedFileNameForStorageUsing(function (UploadedFile $file, callable $get): string {
+                                $pelabuhanId = $get('../../pelabuhan_id');
+                                $layananId = $get('../../layanan_id');
+                                $perangkatId = $get('perangkat_id');
+                                $lokasi = $get('qty_check') ?? 0;
+
+                                // Ambil tanggal dan waktu dari field form
+                                $tanggal = $get('tanggal') ?? now()->toDateString();
+                                $waktu = $get('waktu') ?? now()->format('H:i');
+
+                                // Format tanggal dan waktu dalam format yang mudah dibaca
+                                $datetime = "{$tanggal} {$waktu}";
+
+                                // Ambil nama-nama dari database
+                                $pelabuhan = Pelabuhan::find($pelabuhanId)?->nama ?? 'unknown';
+                                $layanan = Layanan::find($layananId)?->nama ?? 'unknown';
+                                $perangkat = Perangkat::find($perangkatId)?->nama ?? 'unknown';
+
+                                // Bersihkan nama dari karakter yang tidak diinginkan
+                                $pelabuhan = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $pelabuhan);
+                                $layanan = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $layanan);
+                                $perangkat = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $perangkat);
+                                $datetime = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], ':', $datetime);
+
+                                // Ambil extension file
+                                $extension = $file->getClientOriginalExtension();
+
+                                // Format: tanggal_waktu.pelabuhan.layanan.perangkat.lokasi.extension
+                                return "{$datetime}.{$pelabuhan}.{$layanan}.{$perangkat}.{$lokasi}.{$extension}";
+                            }),
 
                         Textarea::make('catatan'),
 
@@ -137,7 +171,7 @@ class OperasionalResource extends Resource
             ]);
     }
 
-  public static function table(Table $table): Table
+    public static function table(Table $table): Table
     {
         return $table
             ->columns([
@@ -171,7 +205,6 @@ class OperasionalResource extends Resource
                     ->openUrlInNewTab(),
             ]);
     }
-
 
     public static function getPages(): array
     {
