@@ -1,0 +1,613 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\ExportDokumenResource\Pages;
+use App\Filament\Resources\ExportDokumenResource\RelationManagers;
+use App\Models\Operasional;
+use App\Models\Pelabuhan;
+use App\Models\Layanan;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Blade;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\DB;
+
+class ExportDokumenResource extends Resource
+{
+    protected static ?string $model = Operasional::class;
+    protected static ?string $navigationIcon = 'heroicon-o-document-arrow-down';
+    protected static ?string $navigationLabel = 'Export Dokumen';
+    protected static ?string $modelLabel = 'Export Dokumen';
+
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('User')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('cabang.nama')
+                    ->label('Cabang')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('pelabuhan.nama')
+                    ->label('Pelabuhan')
+                    ->sortable()
+                    ->badge()
+                    ->color('info'),
+
+                Tables\Columns\TextColumn::make('semua_layanan')
+                    ->label('Layanan Tergabung')
+                    ->sortable(false)
+                    ->badge()
+                    ->color('success')
+                    ->getStateUsing(function ($record) {
+                        $totalLayanan = Layanan::where('pelabuhan_id', $record->pelabuhan_id)->count();
+                        return "Semua Layanan ({$totalLayanan})";
+                    }),
+
+                Tables\Columns\TextColumn::make('status_penggabungan')
+                    ->label('Status')
+                    ->badge()
+                    ->getStateUsing(function ($record) {
+                        return 'Tergabung';
+                    })
+                    ->color('warning'),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Dibuat')
+                    ->dateTime('d M Y H:i')
+                    ->sortable(),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('pelabuhan_id')
+                    ->label('Pelabuhan')
+                    ->options(Pelabuhan::all()->pluck('nama', 'id'))
+                    ->query(function (Builder $query, array $data) {
+                        if (isset($data['value']) && $data['value']) {
+                            return $query->having('pelabuhan_id', '=', $data['value']);
+                        }
+                        return $query;
+                    }),
+
+                Tables\Filters\SelectFilter::make('cabang_id')
+                    ->label('Cabang')
+                    ->options(\App\Models\Cabang::all()->pluck('nama', 'id'))
+                    ->query(function (Builder $query, array $data) {
+                        if (isset($data['value']) && $data['value']) {
+                            return $query->having('cabang_id', '=', $data['value']);
+                        }
+                        return $query;
+                    }),
+
+                Tables\Filters\Filter::make('tanggal')
+                    ->form([
+                        Forms\Components\DatePicker::make('dari_tanggal')
+                            ->label('Dari Tanggal'),
+                        Forms\Components\DatePicker::make('sampai_tanggal')
+                            ->label('Sampai Tanggal'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['dari_tanggal'],
+                                fn (Builder $query, $date): Builder => $query->having(DB::raw('DATE(MIN(created_at))'), '>=', $date),
+                            )
+                            ->when(
+                                $data['sampai_tanggal'],
+                                fn (Builder $query, $date): Builder => $query->having(DB::raw('DATE(MIN(created_at))'), '<=', $date),
+                            );
+                    }),
+            ])
+            ->actions([
+                Tables\Actions\ViewAction::make(),
+
+                // Action untuk Export PDF - semua layanan langsung tergabung
+                Action::make('export_pdf')
+                    ->label('Export PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(function (Operasional $record) {
+                        // Selalu export semua layanan karena sudah otomatis tergabung
+                        return static::generatePDFAllLayanan($record);
+                    }),
+
+                // Action untuk Export PDF dengan Items
+                Action::make('export_pdf_with_items')
+                    ->label('Export PDF dengan Items')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->color('info')
+                    ->action(function (Operasional $record) {
+                        return static::generatePDFWithItems($record);
+                    })
+                    ->visible(fn (Operasional $record) => $record->items->count() > 0),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->action(function ($records) {
+                            // Custom delete untuk grouped records
+                            return static::deleteGroupedRecords($records);
+                        }),
+
+                    // Bulk Export PDF untuk grup terpilih
+                    Tables\Actions\BulkAction::make('bulk_export_pdf')
+                        ->label('Export PDF Terpilih')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('success')
+                        ->action(function ($records) {
+                            return static::generateBulkPDFGrouped($records);
+                        })
+                        ->requiresConfirmation()
+                        ->modalDescription('Export semua grup dokumen terpilih ke dalam satu file PDF?'),
+                ]),
+            ])
+            ->defaultSort('created_at', 'desc');
+    }
+
+    // Method untuk menampilkan detail grup record
+    public static function viewGroupedRecord($record)
+    {
+        // Implementasi untuk menampilkan detail semua record dalam grup
+        return null;
+    }
+
+    // Method untuk generate PDF dari grouped records
+    public static function generatePDFGroupedRecords($record)
+    {
+        try {
+            // Ambil semua record dalam grup tanggal dan pelabuhan yang sama
+            $allRecords = Operasional::where('pelabuhan_id', $record->pelabuhan_id)
+                ->where('user_id', $record->user_id)
+                ->where('cabang_id', $record->cabang_id)
+                ->whereDate('created_at', $record->tanggal)
+                ->get();
+
+            // Ambil semua layanan dari pelabuhan
+            $allLayanan = Layanan::where('pelabuhan_id', $record->pelabuhan_id)->get();
+
+            // Ambil informasi dari record pertama
+            $firstRecord = $allRecords->first();
+            $pelabuhan = Pelabuhan::find($record->pelabuhan_id);
+            $user = \App\Models\User::find($record->user_id);
+            $cabang = \App\Models\Cabang::find($record->cabang_id);
+
+            $pdf = PDF::loadView('pdf.export-grouped-layanan', [
+                'pelabuhan' => $pelabuhan,
+                'semua_layanan' => $allLayanan,
+                'semua_dokumen' => $allRecords,
+                'tanggal_export' => now(),
+                'tanggal_dokumen' => $record->tanggal,
+                'total_layanan' => $allLayanan->count(),
+                'total_dokumen' => $allRecords->count(),
+                'user' => $user,
+                'cabang' => $cabang,
+            ]);
+
+            $filename = 'export-grouped-' .
+                       str_replace(' ', '-', strtolower($pelabuhan->nama)) . '-' .
+                       \Carbon\Carbon::parse($record->tanggal)->format('Y-m-d') . '-' .
+                       now()->format('H-i-s') . '.pdf';
+
+            Notification::make()
+                ->title('PDF Dokumen Tergabung berhasil diexport')
+                ->body($allRecords->count() . ' dokumen dengan ' . $allLayanan->count() . ' layanan dari ' . $pelabuhan->nama)
+                ->success()
+                ->duration(5000)
+                ->send();
+
+            return response()->streamDownload(
+                fn () => print($pdf->output()),
+                $filename,
+                ['Content-Type' => 'application/pdf']
+            );
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error saat export PDF grouped')
+                ->body($e->getMessage())
+                ->danger()
+                ->duration(10000)
+                ->send();
+
+            return null;
+        }
+    }
+
+    // Method untuk show group details
+    public static function showGroupDetails($record)
+    {
+        // Method ini akan dipanggil oleh modal
+        return null;
+    }
+
+    // Method untuk delete grouped records
+    public static function deleteGroupedRecords($records)
+    {
+        try {
+            DB::beginTransaction();
+
+            $totalDeleted = 0;
+
+            foreach ($records as $groupedRecord) {
+                // Hapus semua record dalam grup
+                $deletedCount = Operasional::where('pelabuhan_id', $groupedRecord->pelabuhan_id)
+                    ->where('user_id', $groupedRecord->user_id)
+                    ->where('cabang_id', $groupedRecord->cabang_id)
+                    ->whereDate('created_at', $groupedRecord->tanggal)
+                    ->delete();
+
+                $totalDeleted += $deletedCount;
+            }
+
+            DB::commit();
+
+            Notification::make()
+                ->title('Dokumen berhasil dihapus')
+                ->body($totalDeleted . ' dokumen telah dihapus')
+                ->success()
+                ->duration(5000)
+                ->send();
+
+            return redirect()->back();
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            Notification::make()
+                ->title('Error saat menghapus dokumen')
+                ->body($e->getMessage())
+                ->danger()
+                ->duration(10000)
+                ->send();
+
+            return null;
+        }
+    }
+
+    // Method untuk bulk export PDF grouped
+    public static function generateBulkPDFGrouped($records)
+    {
+        try {
+            $allGroupData = [];
+
+            foreach ($records as $groupedRecord) {
+                // Ambil semua record dalam grup
+                $groupRecords = Operasional::where('pelabuhan_id', $groupedRecord->pelabuhan_id)
+                    ->where('user_id', $groupedRecord->user_id)
+                    ->where('cabang_id', $groupedRecord->cabang_id)
+                    ->whereDate('created_at', $groupedRecord->tanggal)
+                    ->get();
+
+                $layananList = Layanan::where('pelabuhan_id', $groupedRecord->pelabuhan_id)->get();
+                $pelabuhan = Pelabuhan::find($groupedRecord->pelabuhan_id);
+                $user = \App\Models\User::find($groupedRecord->user_id);
+                $cabang = \App\Models\Cabang::find($groupedRecord->cabang_id);
+
+                $allGroupData[] = [
+                    'pelabuhan' => $pelabuhan,
+                    'user' => $user,
+                    'cabang' => $cabang,
+                    'layanan' => $layananList,
+                    'dokumen' => $groupRecords,
+                    'tanggal' => $groupedRecord->tanggal,
+                    'total_layanan' => $layananList->count(),
+                    'total_dokumen' => $groupRecords->count(),
+                ];
+            }
+
+            $pdf = PDF::loadView('pdf.export-bulk-grouped', [
+                'group_data' => $allGroupData,
+                'tanggal_export' => now(),
+                'total_groups' => count($allGroupData),
+                'total_semua_dokumen' => collect($allGroupData)->sum('total_dokumen'),
+                'total_semua_layanan' => collect($allGroupData)->sum('total_layanan'),
+            ]);
+
+            $filename = 'export-bulk-grouped-' . now()->format('Y-m-d-H-i-s') . '.pdf';
+
+            Notification::make()
+                ->title('Bulk PDF Grouped berhasil diexport')
+                ->body(count($allGroupData) . ' grup dengan total ' . collect($allGroupData)->sum('total_dokumen') . ' dokumen')
+                ->success()
+                ->duration(5000)
+                ->send();
+
+            return response()->streamDownload(
+                fn () => print($pdf->output()),
+                $filename,
+                ['Content-Type' => 'application/pdf']
+            );
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error saat bulk export PDF grouped')
+                ->body($e->getMessage())
+                ->danger()
+                ->duration(10000)
+                ->send();
+
+            return null;
+        }
+    }
+
+    // Method untuk memisahkan layanan yang sudah digabung
+    public static function pisahkanLayanan(Operasional $record)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Ambil semua layanan dari pelabuhan
+            $layananList = Layanan::where('pelabuhan_id', $record->pelabuhan_id)->get();
+
+            // Hapus record lama
+            $originalData = $record->toArray();
+            $record->delete();
+
+            // Buat record baru untuk setiap layanan
+            foreach ($layananList as $layanan) {
+                Operasional::create([
+                    'user_id' => $originalData['user_id'],
+                    'cabang_id' => $originalData['cabang_id'],
+                    'pelabuhan_id' => $originalData['pelabuhan_id'],
+                    'layanan_id' => $layanan->id,
+                    'created_at' => $originalData['created_at'],
+                    'updated_at' => now(),
+                ]);
+            }
+
+            DB::commit();
+
+            Notification::make()
+                ->title('Layanan berhasil dipisahkan')
+                ->body('Layanan telah dipisah menjadi ' . $layananList->count() . ' dokumen terpisah')
+                ->success()
+                ->duration(5000)
+                ->send();
+
+            return redirect()->back();
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            Notification::make()
+                ->title('Error saat memisahkan layanan')
+                ->body($e->getMessage())
+                ->danger()
+                ->duration(10000)
+                ->send();
+
+            return null;
+        }
+    }
+
+    // Method untuk bulk gabung per pelabuhan
+    public static function gabungPerPelabuhan($records)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Group records by pelabuhan_id
+            $groupedByPelabuhan = collect($records)->groupBy('pelabuhan_id');
+
+            $totalGabungan = 0;
+
+            foreach ($groupedByPelabuhan as $pelabuhanId => $pelabuhanRecords) {
+                // Ambil record pertama sebagai master
+                $masterRecord = $pelabuhanRecords->first();
+
+                // Update master record untuk gabung semua layanan
+                $masterRecord->update([
+                    'layanan_id' => null,
+                    'updated_at' => now(),
+                ]);
+
+                // Hapus record lainnya dalam pelabuhan yang sama
+                foreach ($pelabuhanRecords->slice(1) as $record) {
+                    $record->delete();
+                }
+
+                $totalGabungan++;
+            }
+
+            DB::commit();
+
+            Notification::make()
+                ->title('Berhasil menggabungkan layanan per pelabuhan')
+                ->body($totalGabungan . ' pelabuhan telah digabungkan layanannya')
+                ->success()
+                ->duration(5000)
+                ->send();
+
+            return redirect()->back();
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            Notification::make()
+                ->title('Error saat menggabungkan per pelabuhan')
+                ->body($e->getMessage())
+                ->danger()
+                ->duration(10000)
+                ->send();
+
+            return null;
+        }
+    }
+
+    // Method untuk generate PDF semua layanan dari pelabuhan (sudah ada, diperbaiki)
+    public static function generatePDFAllLayanan(Operasional $record)
+    {
+        try {
+            // Ambil semua layanan dari pelabuhan
+            $allLayanan = Layanan::where('pelabuhan_id', $record->pelabuhan_id)->get();
+
+            // Ambil informasi pelabuhan
+            $pelabuhan = $record->pelabuhan;
+
+            $pdf = PDF::loadView('pdf.export-semua-layanan', [
+                'pelabuhan' => $pelabuhan,
+                'semua_layanan' => $allLayanan,
+                'tanggal_export' => now(),
+                'total_layanan' => $allLayanan->count(),
+                'user' => $record->user,
+                'cabang' => $record->cabang,
+                'operasional' => $record,
+            ]);
+
+            $filename = 'export-gabungan-layanan-' .
+                       str_replace(' ', '-', strtolower($pelabuhan->nama)) . '-' .
+                       now()->format('Y-m-d-H-i-s') . '.pdf';
+
+            Notification::make()
+                ->title('PDF Gabungan Layanan berhasil diexport')
+                ->body('Semua ' . $allLayanan->count() . ' layanan dari ' . $pelabuhan->nama)
+                ->success()
+                ->duration(5000)
+                ->send();
+
+            return response()->streamDownload(
+                fn () => print($pdf->output()),
+                $filename,
+                ['Content-Type' => 'application/pdf']
+            );
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error saat export PDF gabungan')
+                ->body($e->getMessage())
+                ->danger()
+                ->duration(10000)
+                ->send();
+
+            return null;
+        }
+    }
+
+    // Method untuk generate PDF normal (tambahan untuk layanan individu)
+    public static function generatePDF(Operasional $record)
+    {
+        try {
+            $pdf = PDF::loadView('pdf.export-layanan-individu', [
+                'operasional' => $record,
+                'pelabuhan' => $record->pelabuhan,
+                'layanan' => $record->layanan,
+                'user' => $record->user,
+                'cabang' => $record->cabang,
+                'tanggal_export' => now(),
+            ]);
+
+            $filename = 'export-' .
+                       str_replace(' ', '-', strtolower($record->layanan->nama)) . '-' .
+                       str_replace(' ', '-', strtolower($record->pelabuhan->nama)) . '-' .
+                       now()->format('Y-m-d-H-i-s') . '.pdf';
+
+            Notification::make()
+                ->title('PDF Layanan berhasil diexport')
+                ->body($record->layanan->nama . ' - ' . $record->pelabuhan->nama)
+                ->success()
+                ->duration(5000)
+                ->send();
+
+            return response()->streamDownload(
+                fn () => print($pdf->output()),
+                $filename,
+                ['Content-Type' => 'application/pdf']
+            );
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error saat export PDF')
+                ->body($e->getMessage())
+                ->danger()
+                ->duration(10000)
+                ->send();
+
+            return null;
+        }
+    }
+
+    // Method generatePDFWithItems, generateBulkPDF, dll tetap sama seperti sebelumnya
+    // ...
+
+    public static function getRelations(): array
+    {
+        return [];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListExportDokumens::route('/'),
+            'create' => Pages\CreateExportDokumen::route('/create'),
+            'view' => Pages\ViewExportDokumen::route('/{record}'),
+            'edit' => Pages\EditExportDokumen::route('/{record}/edit'),
+        ];
+    }
+
+    // Override untuk menambahkan navigation badge
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count() ?: null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'info';
+    }
+
+    // Global search
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['user.name', 'pelabuhan.nama', 'layanan.nama', 'cabang.nama'];
+    }
+
+    public static function getGlobalSearchResultTitle(Model $record): string
+    {
+        return 'Operasional #' . $record->id . ' - ' . ($record->user->name ?? 'Unknown');
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Pelabuhan' => $record->pelabuhan->nama ?? '-',
+            'Layanan' => 'Semua Layanan Tergabung',
+            'Cabang' => $record->cabang->nama ?? '-',
+            'Tanggal' => $record->created_at->format('d M Y'),
+        ];
+    }
+
+    // Custom method untuk statistik (disesuaikan untuk grouped data)
+    public static function getStats(): array
+    {
+        // Hitung berdasarkan grup (tanggal + pelabuhan + user + cabang)
+        $totalGroups = Operasional::selectRaw('COUNT(DISTINCT CONCAT(DATE(created_at), "-", pelabuhan_id, "-", user_id, "-", cabang_id)) as total')
+            ->first()->total;
+
+        $thisMonthGroups = Operasional::selectRaw('COUNT(DISTINCT CONCAT(DATE(created_at), "-", pelabuhan_id, "-", user_id, "-", cabang_id)) as total')
+            ->whereMonth('created_at', now()->month)
+            ->first()->total;
+
+        $thisWeekGroups = Operasional::selectRaw('COUNT(DISTINCT CONCAT(DATE(created_at), "-", pelabuhan_id, "-", user_id, "-", cabang_id)) as total')
+            ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+            ->first()->total;
+
+        $totalRecords = Operasional::count();
+
+        return [
+            'total_groups' => $totalGroups,
+            'total_records' => $totalRecords,
+            'this_month' => $thisMonthGroups,
+            'this_week' => $thisWeekGroups,
+        ];
+    }
+}

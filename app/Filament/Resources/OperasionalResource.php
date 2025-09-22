@@ -65,6 +65,7 @@ class OperasionalResource extends Resource
                     ->afterStateUpdated(function ($state, callable $set, callable $get) {
                         $cabangId = $get('cabang_id');
                         $pelabuhanId = $get('pelabuhan_id');
+                        $qtyCheck = $get('qty_check'); // Get the selected qty_check value
 
                         // Ambil perangkat berdasarkan cabang, pelabuhan, dan layanan
                         if ($cabangId && $pelabuhanId && $state) {
@@ -79,6 +80,7 @@ class OperasionalResource extends Resource
                                     'perangkat_id' => $p->id,
                                     'nama' => $p->nama,
                                     'qty' => $p->qty,
+                                    'qty_check' => $qtyCheck ?? 1, // Add qty_check field
                                     'status_perangkat' => null,
                                     'foto' => null,
                                     'catatan' => null,
@@ -88,6 +90,32 @@ class OperasionalResource extends Resource
                             }
                             $set('items', $items);
                         }
+                    }),
+
+                // Select qty_check (renamed from lokasi)
+                Forms\Components\Select::make('qty_check')
+                    ->label('Titik Lokasi')
+                    ->options([
+                        1 => 'Lokasi 1',
+                        2 => 'Lokasi 2',
+                        3 => 'Lokasi 3',
+                        4 => 'Lokasi 4',
+                        5 => 'Lokasi 5',
+                        6 => 'Lokasi 6',
+                        7 => 'Lokasi 7',
+                        8 => 'Lokasi 8',
+                        9 => 'Lokasi 9',
+                        10 => 'Lokasi 10',
+                    ])
+                    ->required()
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                        // Update existing items with the new qty_check value
+                        $items = $get('items') ?? [];
+                        foreach ($items as $key => $item) {
+                            $items[$key]['qty_check'] = $state;
+                        }
+                        $set('items', $items);
                     }),
 
                 // Repeater items
@@ -113,12 +141,11 @@ class OperasionalResource extends Resource
                             ->required()
                             ->reactive(),
 
-                        TextInput::make('qty_check')
-                            ->label('Lokasi check')
-                            ->numeric()
-                            ->default(0)
-                            ->required()
-                            ->reactive(),
+                        // Hidden field for qty_check - will be populated from parent
+                        Forms\Components\Hidden::make('qty_check')
+                            ->default(function (callable $get) {
+                                return $get('../../qty_check') ?? 1;
+                            }),
 
                         Select::make('status_perangkat')
                             ->options([
@@ -135,7 +162,7 @@ class OperasionalResource extends Resource
                                 $pelabuhanId = $get('../../pelabuhan_id');
                                 $layananId = $get('../../layanan_id');
                                 $perangkatId = $get('perangkat_id');
-                                $lokasi = $get('qty_check') ?? 0;
+                                $qtyCheck = $get('qty_check') ?? $get('../../qty_check') ?? '1'; // Use qty_check as string
 
                                 // Ambil tanggal dan waktu dari field form
                                 $tanggal = $get('tanggal') ?? now()->toDateString();
@@ -153,13 +180,13 @@ class OperasionalResource extends Resource
                                 $pelabuhan = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $pelabuhan);
                                 $layanan = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $layanan);
                                 $perangkat = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $perangkat);
-                                $datetime = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], ':', $datetime);
+                                $datetime = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $datetime);
 
                                 // Ambil extension file
                                 $extension = $file->getClientOriginalExtension();
 
-                                // Format: tanggal_waktu.pelabuhan.layanan.perangkat.lokasi.extension
-                                return "{$datetime}.{$pelabuhan}.{$layanan}.{$perangkat}.{$lokasi}.{$extension}";
+                                // Format: tanggal_waktu.pelabuhan.layanan.qty_check.perangkat.extension
+                                return "{$datetime}.{$pelabuhan}.{$layanan}.{$qtyCheck}.{$perangkat}.{$extension}";
                             }),
 
                         Textarea::make('catatan'),
@@ -179,6 +206,13 @@ class OperasionalResource extends Resource
                 Tables\Columns\TextColumn::make('cabang.nama')->label('Cabang')->searchable(),
                 Tables\Columns\TextColumn::make('pelabuhan.nama')->label('Pelabuhan')->searchable(),
                 Tables\Columns\TextColumn::make('layanan.nama')->label('Layanan')->searchable(),
+                Tables\Columns\TextColumn::make('qty_check')
+                    ->label('Titik Lokasi')
+                    ->getStateUsing(function (Model $record) {
+                        $firstItem = $record->items()->first();
+                        return $firstItem ? "Lokasi {$firstItem->qty_check}" : 'Tidak ada data';
+                    })
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('tanggal')
                     ->label('Tanggal')
                     ->getStateUsing(function (Model $record) {
@@ -197,12 +231,16 @@ class OperasionalResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
 
-                Tables\Actions\Action::make('exportPdf')
-                    ->label('Export PDF')
-                    ->icon('heroicon-o-document-arrow-down')
-                    ->url(fn (Model $record) => route('laporan.operasional.pdf', $record->id))
-                    ->openUrlInNewTab(),
+                // Tables\Actions\Action::make('exportPdf')
+                //     ->label('Export PDF')
+                //     ->icon('heroicon-o-document-arrow-down')
+                //     ->url(fn (Model $record) => route('laporan.operasional.pdf', $record->id))
+                //     ->openUrlInNewTab(),
+            ])
+            ->bulkActions([
+                Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
 

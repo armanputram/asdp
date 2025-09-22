@@ -11,17 +11,6 @@ class EditOperasional extends EditRecord
 {
     protected static string $resource = OperasionalResource::class;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            \Filament\Actions\Action::make('export_pdf')
-                ->label('Export PDF')
-                ->icon('heroicon-o-document-text')
-                ->url(fn () => route('laporan.operasional.pdf', $this->record->id))
-                ->openUrlInNewTab(),
-        ];
-    }
-
     protected function mutateFormDataBeforeFill(array $data): array
     {
         // Ambil semua items terkait operasional ini
@@ -29,11 +18,18 @@ class EditOperasional extends EditRecord
             ->where('operasional_id', $this->record->id)
             ->get();
 
+        // Ambil qty_check dari item pertama untuk ditampilkan di form utama
+        $firstItem = $items->first();
+        if ($firstItem) {
+            $data['qty_check'] = $firstItem->qty_check;
+        }
+
         $data['items'] = $items->map(function ($item) {
             return [
-                'id'               => $item->id, // Tambahkan ID untuk tracking
+                'id'               => $item->id,
                 'perangkat_id'     => $item->perangkat_id,
-                'nama_perangkat'   => $item->perangkat->nama ?? '', // Ubah nama field
+                'nama_perangkat'   => $item->perangkat->nama ?? '',
+                'qty'              => $item->qty ?? 1, // PASTIKAN ADA DEFAULT VALUE
                 'qty_check'        => $item->qty_check,
                 'status_perangkat' => $item->status_perangkat,
                 'foto'             => $item->foto,
@@ -61,28 +57,62 @@ class EditOperasional extends EditRecord
                 ->disabled()
                 ->label('Layanan ID'),
 
+            Forms\Components\Select::make('qty_check')
+                ->label('Titik Lokasi')
+                ->options([
+                    '1' => 'Lokasi 1',
+                    '2' => 'Lokasi 2',
+                    '3' => 'Lokasi 3',
+                    '4' => 'Lokasi 4',
+                    '5' => 'Lokasi 5',
+                    '6' => 'Lokasi 6',
+                    '7' => 'Lokasi 7',
+                    '8' => 'Lokasi 8',
+                    '9' => 'Lokasi 9',
+                    '10' => 'Lokasi 10',
+                ])
+                ->required()
+                ->reactive()
+                ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                    $items = $get('items') ?? [];
+                    if (!empty($items)) {
+                        foreach ($items as $key => $item) {
+                            $items[$key]['qty_check'] = $state;
+                        }
+                        $set('items', $items);
+                    }
+                }),
+
             Forms\Components\Repeater::make('items')
                 ->label('Items Operasional')
                 ->schema([
-                    Forms\Components\Hidden::make('id'), // Untuk tracking existing records
-
+                    Forms\Components\Hidden::make('id'),
                     Forms\Components\Hidden::make('perangkat_id'),
 
                     Forms\Components\TextInput::make('nama_perangkat')
                         ->disabled()
                         ->label('Nama Perangkat'),
 
-                    Forms\Components\TextInput::make('qty_check')
+                    // TAMBAHKAN FIELD QTY YANG BISA DIISI
+                    Forms\Components\TextInput::make('qty')
                         ->numeric()
+                        ->default(1)
                         ->required()
+                        ->minValue(1)
+                        ->label('Quantity'),
+
+                    // Tampilkan qty_check sebagai field yang bisa dilihat
+                    Forms\Components\TextInput::make('qty_check')
+                        ->disabled()
                         ->label('Qty Check')
-                        ->minValue(0),
+                        ->default(function (callable $get) {
+                            return $get('../../qty_check') ?? '1';
+                        }),
 
                     Forms\Components\Select::make('status_perangkat')
                         ->options([
                             'baik' => 'Baik',
                             'rusak' => 'Rusak',
-                            'maintenance' => 'Maintenance',
                         ])
                         ->required()
                         ->label('Status Perangkat'),
@@ -90,7 +120,7 @@ class EditOperasional extends EditRecord
                     Forms\Components\FileUpload::make('foto')
                         ->image()
                         ->directory('operasional-foto')
-                        ->maxSize(2048) // 2MB
+                        ->maxSize(2048)
                         ->imageResizeMode('cover')
                         ->imageCropAspectRatio('16:9')
                         ->label('Foto'),
@@ -115,61 +145,84 @@ class EditOperasional extends EditRecord
                 ->itemLabel(fn (array $state): ?string => $state['nama_perangkat'] ?? 'Item Baru')
                 ->addActionLabel('Tambah Item')
                 ->reorderableWithButtons()
-                ->cloneable(),
+                ->cloneable()
+                ->deleteAction(
+                    fn (Forms\Components\Actions\Action $action) => $action
+                        ->requiresConfirmation()
+                ),
         ];
     }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // Pastikan data yang tidak perlu dihapus dari save
-        if (isset($data['items'])) {
-            foreach ($data['items'] as &$item) {
-                // Hapus field yang tidak ada di database
-                unset($item['nama_perangkat']);
+        // Simpan qty_check untuk nanti
+        $this->qtyCheck = $data['qty_check'] ?? '1';
 
-                // Pastikan operasional_id diset
-                $item['operasional_id'] = $this->record->id;
-            }
-        }
+        // Hapus dari data utama karena tidak ada di tabel operasional
+        unset($data['qty_check']);
 
         return $data;
     }
 
     protected function afterSave(): void
     {
-        // Handle manual saving jika diperlukan
-        $this->handleItemsSync();
+        $this->syncItems();
     }
 
-    private function handleItemsSync(): void
+    private function syncItems(): void
     {
         $formData = $this->form->getState();
+        $items = $formData['items'] ?? [];
+        $qtyCheck = $this->qtyCheck ?? '1';
 
-        if (isset($formData['items'])) {
-            $existingItemIds = [];
+        $processedItemIds = [];
 
-            foreach ($formData['items'] as $itemData) {
-                // Bersihkan data yang tidak diperlukan
-                unset($itemData['nama_perangkat']);
-                $itemData['operasional_id'] = $this->record->id;
+        foreach ($items as $itemData) {
+            // Bersihkan data yang tidak diperlukan
+            unset($itemData['nama_perangkat']);
 
-                if (isset($itemData['id']) && $itemData['id']) {
-                    // Update existing item
-                    OperasionalItem::where('id', $itemData['id'])
-                        ->update($itemData);
-                    $existingItemIds[] = $itemData['id'];
-                } else {
-                    // Create new item
-                    unset($itemData['id']);
-                    $newItem = OperasionalItem::create($itemData);
-                    $existingItemIds[] = $newItem->id;
-                }
+            // Pastikan qty_check sesuai dengan pilihan di form utama
+            $itemData['qty_check'] = $qtyCheck;
+            $itemData['operasional_id'] = $this->record->id;
+
+            // PASTIKAN QTY TIDAK NULL
+            if (!isset($itemData['qty']) || $itemData['qty'] === null) {
+                $itemData['qty'] = 1;
             }
 
-            // Delete items that are no longer in the form
+            // PERBAIKAN LOGIKA UPDATE VS CREATE
+            if (isset($itemData['id']) && !empty($itemData['id']) && is_numeric($itemData['id'])) {
+                // Update existing item
+                $itemId = $itemData['id'];
+                unset($itemData['id']);
+
+                // PASTIKAN RECORD BENAR-BENAR ADA
+                $existingItem = OperasionalItem::find($itemId);
+                if ($existingItem && $existingItem->operasional_id == $this->record->id) {
+                    $existingItem->update($itemData);
+                    $processedItemIds[] = $itemId;
+                } else {
+                    // Jika tidak ditemukan, buat baru
+                    unset($itemData['id']);
+                    $newItem = OperasionalItem::create($itemData);
+                    $processedItemIds[] = $newItem->id;
+                }
+            } else {
+                // Create new item
+                unset($itemData['id']);
+                $newItem = OperasionalItem::create($itemData);
+                $processedItemIds[] = $newItem->id;
+            }
+        }
+
+        // Hapus items yang tidak ada di form (hanya yang belongs to operasional ini)
+        if (!empty($processedItemIds)) {
             OperasionalItem::where('operasional_id', $this->record->id)
-                ->whereNotIn('id', $existingItemIds)
+                ->whereNotIn('id', $processedItemIds)
                 ->delete();
+        } else {
+            // Jika tidak ada items, hapus semua items untuk operasional ini
+            OperasionalItem::where('operasional_id', $this->record->id)->delete();
         }
     }
 }

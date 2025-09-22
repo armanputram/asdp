@@ -17,12 +17,12 @@ class Operasional extends Model
         'pelabuhan_id',
         'layanan_id',
     ];
-    
 
-    public function items()
-    {
-        return $this->hasMany(OperasionalItem::class);
-    }
+
+public function items()
+{
+    return $this->hasMany(OperasionalItem::class, 'operasional_id');
+}
 
     public function user()
     {

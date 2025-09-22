@@ -1,0 +1,117 @@
+/* Custom CSS untuk Operasional Cards - Simpan di resources/css/operasional.css */
+
+.operasional-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 20px;
+    color: white;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.operasional-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+}
+
+.operasional-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #00f5ff, #ffd700, #ff6b6b);
+}
+
+.service-icon {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: inline-block;
+    backdrop-filter: blur(10px);
+}
+
+.service-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.service-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+/* Warna berbeda untuk setiap jenis layanan */
+.layanan-loket-pejalan { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.layanan-tolgate-r4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+.layanan-tolgate-r2 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+.layanan-loket-bulusan { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+.layanan-rak-server { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+
+/* Filter cards styling */
+.filter-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    background: #f8fafc;
+}
+
+.filter-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.filter-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: #3b82f6;
+}
+
+.filter-card.active {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.filter-card-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 15px;
+    background: #e0f2fe;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #276688;
+}
+
+.filter-card-title {
+    text-align: center;
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 1.1em;
+}

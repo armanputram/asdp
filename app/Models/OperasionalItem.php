@@ -26,7 +26,6 @@ class OperasionalItem extends Model
         'tanggal' => 'date',
         'waktu' => 'datetime:H:i',
         'qty' => 'integer',
-        'qty_check' => 'integer',
     ];
 
     protected $dates = [
@@ -38,9 +37,9 @@ class OperasionalItem extends Model
 
     // Relationships
     public function operasional()
-    {
-        return $this->belongsTo(Operasional::class);
-    }
+{
+    return $this->belongsTo(Operasional::class, 'operasional_id');
+}
 
     public function perangkat()
     {
