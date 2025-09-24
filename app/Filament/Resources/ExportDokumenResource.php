@@ -49,6 +49,7 @@ class ExportDokumenResource extends Resource
                     ->badge()
                     ->color('info'),
 
+
                 Tables\Columns\TextColumn::make('semua_layanan')
                     ->label('Layanan Tergabung')
                     ->sortable(false)
@@ -59,107 +60,168 @@ class ExportDokumenResource extends Resource
                         return "Semua Layanan ({$totalLayanan})";
                     }),
 
-                Tables\Columns\TextColumn::make('status_penggabungan')
-                    ->label('Status')
-                    ->badge()
-                    ->getStateUsing(function ($record) {
-                        return 'Tergabung';
-                    })
-                    ->color('warning'),
-
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d M Y H:i')
                     ->sortable(),
             ])
-            ->filters([
-                Tables\Filters\SelectFilter::make('pelabuhan_id')
-                    ->label('Pelabuhan')
-                    ->options(Pelabuhan::all()->pluck('nama', 'id'))
-                    ->query(function (Builder $query, array $data) {
-                        if (isset($data['value']) && $data['value']) {
-                            return $query->having('pelabuhan_id', '=', $data['value']);
-                        }
-                        return $query;
+                   ->filters([
+            Tables\Filters\SelectFilter::make('cabang_id')
+                ->label('Cabang')
+                ->options(\App\Models\Cabang::all()->pluck('nama', 'id')),
+
+            Tables\Filters\SelectFilter::make('pelabuhan_id')
+                ->label('Pelabuhan')
+                ->options(Pelabuhan::all()->pluck('nama', 'id')),
+
+            Tables\Filters\SelectFilter::make('user_id')
+                ->label('User')
+                ->options(\App\Models\User::all()->pluck('name', 'id')),
+
+            Tables\Filters\Filter::make('tanggal')
+                ->form([
+                    Forms\Components\DatePicker::make('dari_tanggal')
+                        ->label('Dari Tanggal'),
+                    Forms\Components\DatePicker::make('sampai_tanggal')
+                        ->label('Sampai Tanggal'),
+                ])
+                ->query(function (Builder $query, array $data): Builder {
+                    return $query
+                        ->when(
+                            $data['dari_tanggal'],
+                            fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                        )
+                        ->when(
+                            $data['sampai_tanggal'],
+                            fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                        );
+                })
+                ->indicateUsing(function (array $data): array {
+                    $indicators = [];
+                    if ($data['dari_tanggal']) {
+                        $indicators['dari_tanggal'] = 'Dari: ' . \Carbon\Carbon::parse($data['dari_tanggal'])->format('d M Y');
+                    }
+                    if ($data['sampai_tanggal']) {
+                        $indicators['sampai_tanggal'] = 'Sampai: ' . \Carbon\Carbon::parse($data['sampai_tanggal'])->format('d M Y');
+                    }
+                    return $indicators;
+                }),
+        ])
+        ->actions([
+            Tables\Actions\ViewAction::make(),
+
+      Action::make('export_pdf')
+    ->label('Export PDF')
+    ->icon('heroicon-o-document-arrow-down')
+    ->color('success')
+    ->url(fn (Operasional $record) => route('export.pdf', $record->id))
+    ->openUrlInNewTab(),
+        ])
+        ->bulkActions([
+            Tables\Actions\BulkActionGroup::make([
+                Tables\Actions\DeleteBulkAction::make()
+                    ->action(function ($records) {
+                        return static::deleteGroupedRecords($records);
                     }),
 
-                Tables\Filters\SelectFilter::make('cabang_id')
-                    ->label('Cabang')
-                    ->options(\App\Models\Cabang::all()->pluck('nama', 'id'))
-                    ->query(function (Builder $query, array $data) {
-                        if (isset($data['value']) && $data['value']) {
-                            return $query->having('cabang_id', '=', $data['value']);
-                        }
-                        return $query;
-                    }),
-
-                Tables\Filters\Filter::make('tanggal')
-                    ->form([
-                        Forms\Components\DatePicker::make('dari_tanggal')
-                            ->label('Dari Tanggal'),
-                        Forms\Components\DatePicker::make('sampai_tanggal')
-                            ->label('Sampai Tanggal'),
-                    ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query
-                            ->when(
-                                $data['dari_tanggal'],
-                                fn (Builder $query, $date): Builder => $query->having(DB::raw('DATE(MIN(created_at))'), '>=', $date),
-                            )
-                            ->when(
-                                $data['sampai_tanggal'],
-                                fn (Builder $query, $date): Builder => $query->having(DB::raw('DATE(MIN(created_at))'), '<=', $date),
-                            );
-                    }),
-            ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-
-                // Action untuk Export PDF - semua layanan langsung tergabung
-                Action::make('export_pdf')
-                    ->label('Export PDF')
+                Tables\Actions\BulkAction::make('bulk_export_pdf')
+                    ->label('Export PDF Terpilih')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('success')
-                    ->action(function (Operasional $record) {
-                        // Selalu export semua layanan karena sudah otomatis tergabung
-                        return static::generatePDFAllLayanan($record);
-                    }),
-
-                // Action untuk Export PDF dengan Items
-                Action::make('export_pdf_with_items')
-                    ->label('Export PDF dengan Items')
-                    ->icon('heroicon-o-document-duplicate')
-                    ->color('info')
-                    ->action(function (Operasional $record) {
-                        return static::generatePDFWithItems($record);
+                    ->action(function ($records) {
+                        return static::generateBulkPDFGrouped($records);
                     })
-                    ->visible(fn (Operasional $record) => $record->items->count() > 0),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->action(function ($records) {
-                            // Custom delete untuk grouped records
-                            return static::deleteGroupedRecords($records);
-                        }),
+                    ->requiresConfirmation()
+                    ->modalDescription('Export semua grup dokumen terpilih ke dalam satu file PDF?'),
+            ]),
+        ])
+        ->defaultSort('created_at', 'desc');
+}
 
-                    // Bulk Export PDF untuk grup terpilih
-                    Tables\Actions\BulkAction::make('bulk_export_pdf')
-                        ->label('Export PDF Terpilih')
-                        ->icon('heroicon-o-document-arrow-down')
-                        ->color('success')
-                        ->action(function ($records) {
-                            return static::generateBulkPDFGrouped($records);
-                        })
-                        ->requiresConfirmation()
-                        ->modalDescription('Export semua grup dokumen terpilih ke dalam satu file PDF?'),
-                ]),
-            ])
-            ->defaultSort('created_at', 'desc');
-    }
+
+public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            Forms\Components\Section::make('Informasi Utama')
+                ->schema([
+                    Forms\Components\Select::make('user_id')
+                        ->relationship('user', 'name')
+                        ->label('User')
+                        ->disabled(),
+                    Forms\Components\Select::make('cabang_id')
+                        ->relationship('cabang', 'nama')
+                        ->label('Cabang')
+                        ->disabled(),
+                    Forms\Components\Select::make('pelabuhan_id')
+                        ->relationship('pelabuhan', 'nama')
+                        ->label('Pelabuhan')
+                        ->disabled(),
+                    Forms\Components\DateTimePicker::make('created_at')
+                        ->label('Tanggal & Waktu')
+                        ->disabled(),
+                ])->columns(2),
+
+            Forms\Components\Repeater::make('semua_layanan_dan_perangkat')
+                ->label('Semua Layanan dan Perangkat')
+                ->schema([
+                    Forms\Components\Placeholder::make('nama_layanan')
+                        ->label('Layanan')
+                        ->content(fn ($state, $get) => \App\Models\Layanan::find($get('layanan_id'))->nama ?? 'Tidak Diketahui'),
+                    Forms\Components\Placeholder::make('nama_perangkat')
+                        ->label('Perangkat')
+                        ->content(fn ($state, $get) => \App\Models\Perangkat::find($get('perangkat_id'))->nama ?? 'Tidak Diketahui'),
+                    Forms\Components\Placeholder::make('lokasi')
+                        ->label('Lokasi')
+                        ->content(fn ($state, $get) => \App\Models\Pelabuhan::find($get('pelabuhan_id'))->nama ?? 'Tidak Diketahui'),
+                    Forms\Components\Placeholder::make('status')
+                        ->label('Status Laporan')
+                        ->content(fn ($state, $get) => $get('status')),
+                ])
+                ->mutateDehydratedStateUsing(function (Model $record): array {
+                    $allLayanan = \App\Models\Layanan::where('pelabuhan_id', $record->pelabuhan_id)->with('perangkat')->get();
+
+                    $groupedRecords = \App\Models\Operasional::where('pelabuhan_id', $record->pelabuhan_id)
+                        ->whereDate('created_at', $record->created_at)
+                        ->where('cabang_id', $record->cabang_id)
+                        ->where('user_id', $record->user_id)
+                        ->with('items')
+                        ->get();
+
+                    $data = [];
+                    foreach ($allLayanan as $layanan) {
+                        foreach ($layanan->perangkat as $perangkat) {
+                            $isReported = false;
+                            foreach ($groupedRecords as $opRecord) {
+                                if ($opRecord->layanan_id == $layanan->id && $opRecord->items->where('perangkat_id', $perangkat->id)->isNotEmpty()) {
+                                    $isReported = true;
+                                    break;
+                                }
+                            }
+
+                            $data[] = [
+                                'layanan_id' => $layanan->id,
+                                'perangkat_id' => $perangkat->id,
+                                'pelabuhan_id' => $record->pelabuhan_id,
+                                'status' => $isReported ? 'Sudah Dilaporkan' : 'Belum Dilaporkan',
+                            ];
+                        }
+                    }
+
+                    return $data;
+                })
+                ->columns(4)
+                ->disableItemDeletion()
+                ->disableItemCreation(),
+        ]);
+}
+// ... (Sisa kode di bawahnya tetap sama)
+
 
     // Method untuk menampilkan detail grup record
     public static function viewGroupedRecord($record)
+
+
     {
         // Implementasi untuk menampilkan detail semua record dalam grup
         return null;
@@ -447,52 +509,68 @@ class ExportDokumenResource extends Resource
     }
 
     // Method untuk generate PDF semua layanan dari pelabuhan (sudah ada, diperbaiki)
-    public static function generatePDFAllLayanan(Operasional $record)
-    {
-        try {
-            // Ambil semua layanan dari pelabuhan
-            $allLayanan = Layanan::where('pelabuhan_id', $record->pelabuhan_id)->get();
+// Method untuk generate PDF semua layanan dari pelabuhan (updated)
+public static function generatePDFAllLayanan(Operasional $record)
+{
+    try {
+        // Ambil semua layanan dari pelabuhan dengan perangkat
+        $allLayanan = Layanan::with('perangkat')
+            ->where('pelabuhan_id', $record->pelabuhan_id)
+            ->get();
 
-            // Ambil informasi pelabuhan
-            $pelabuhan = $record->pelabuhan;
+        // Ambil semua record operasional yang grouped dengan items
+        $groupedRecords = Operasional::where('pelabuhan_id', $record->pelabuhan_id)
+            ->whereDate('created_at', $record->created_at)
+            ->where('cabang_id', $record->cabang_id)
+            ->where('user_id', $record->user_id)
+            ->with(['layanan', 'items.perangkat'])
+            ->get();
 
-            $pdf = PDF::loadView('pdf.export-semua-layanan', [
-                'pelabuhan' => $pelabuhan,
-                'semua_layanan' => $allLayanan,
-                'tanggal_export' => now(),
-                'total_layanan' => $allLayanan->count(),
-                'user' => $record->user,
-                'cabang' => $record->cabang,
-                'operasional' => $record,
-            ]);
+        // Set data untuk template
+        $tanggal = now()->format('l, F d, Y'); // Format: Wednesday, August 06, 2025
+        $waktu = now()->format('H:i'); // Format: 10:00
 
-            $filename = 'export-gabungan-layanan-' .
-                       str_replace(' ', '-', strtolower($pelabuhan->nama)) . '-' .
-                       now()->format('Y-m-d-H-i-s') . '.pdf';
+        // Gunakan template operasional.blade.php yang sudah ada
+        $pdf = PDF::loadView('pdf.operasional', [
+            'operasional' => $record,
+            'tanggal' => $tanggal,
+            'waktu' => $waktu,
+            'pelabuhan' => $record->pelabuhan,
+            'semua_layanan' => $allLayanan,
+            'grouped_records' => $groupedRecords,
+            'tanggal_export' => now(),
+            'total_layanan' => $allLayanan->count(),
+            'user' => $record->user,
+            'cabang' => $record->cabang,
+        ])->setPaper('a4', 'landscape'); // Set landscape sesuai template
 
-            Notification::make()
-                ->title('PDF Gabungan Layanan berhasil diexport')
-                ->body('Semua ' . $allLayanan->count() . ' layanan dari ' . $pelabuhan->nama)
-                ->success()
-                ->duration(5000)
-                ->send();
+        $filename = 'export-checklist-' .
+                   str_replace(' ', '-', strtolower($record->pelabuhan->nama)) . '-' .
+                   now()->format('Y-m-d-H-i-s') . '.pdf';
 
-            return response()->streamDownload(
-                fn () => print($pdf->output()),
-                $filename,
-                ['Content-Type' => 'application/pdf']
-            );
-        } catch (\Exception $e) {
-            Notification::make()
-                ->title('Error saat export PDF gabungan')
-                ->body($e->getMessage())
-                ->danger()
-                ->duration(10000)
-                ->send();
+        Notification::make()
+            ->title('PDF Checklist berhasil diexport')
+            ->body('Form Checklist ' . $record->pelabuhan->nama . ' telah digenerate')
+            ->success()
+            ->duration(5000)
+            ->send();
 
-            return null;
-        }
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            $filename,
+            ['Content-Type' => 'application/pdf']
+        );
+    } catch (\Exception $e) {
+        Notification::make()
+            ->title('Error saat export PDF checklist')
+            ->body($e->getMessage())
+            ->danger()
+            ->duration(10000)
+            ->send();
+
+        return null;
     }
+}
 
     // Method untuk generate PDF normal (tambahan untuk layanan individu)
     public static function generatePDF(Operasional $record)
@@ -538,6 +616,20 @@ class ExportDokumenResource extends Resource
 
     // Method generatePDFWithItems, generateBulkPDF, dll tetap sama seperti sebelumnya
     // ...
+ public static function getEloquentQuery(): Builder
+{
+    // Mengelompokkan data berdasarkan pelabuhan, cabang, user, dan tanggal
+    return parent::getEloquentQuery()
+        ->selectRaw('
+            MIN(id) as id,
+            pelabuhan_id,
+            cabang_id,
+            user_id,
+            DATE(created_at) as tanggal,
+            MIN(created_at) as created_at
+        ')
+        ->groupBy('pelabuhan_id', 'cabang_id', 'user_id', DB::raw('DATE(created_at)'));
+}
 
     public static function getRelations(): array
     {
