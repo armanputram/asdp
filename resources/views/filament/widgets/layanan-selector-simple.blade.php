@@ -29,7 +29,7 @@
                 Klik pada kartu layanan di bawah untuk menampilkan data operasional
             </p>
         </div>
-    @endif  
+    @endif
 
     <div class="layanan-selector-grid p-6 bg-white rounded-xl">
         <style>

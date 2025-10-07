@@ -22,6 +22,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
+use Filament\Forms\Components\Radio;
 
 class OperasionalResource extends Resource
 {
@@ -147,11 +148,15 @@ class OperasionalResource extends Resource
                                 return $get('../../qty_check') ?? 1;
                             }),
 
-                        Select::make('status_perangkat')
+                       // DIGANTI DENGAN RADIO BUTTON
+                        Radio::make('status_perangkat')
+                            ->label('Status Perangkat')
                             ->options([
                                 'baik' => 'Baik',
                                 'rusak' => 'Rusak',
                             ])
+                            ->inline()
+                            ->inlineLabel(false)
                             ->required(),
 
                         FileUpload::make('foto')

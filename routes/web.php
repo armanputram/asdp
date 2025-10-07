@@ -14,5 +14,5 @@ use App\Http\Controllers\OperasionalPdfController;
  Route::get('/export-pdf/{id}', [OperasionalPdfController::class, 'exportPdf'])->name('export.pdf');
 
 Route::get('/', function () {
- return view('welcome');
+    return redirect('/admin');
 });

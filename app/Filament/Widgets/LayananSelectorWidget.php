@@ -14,6 +14,12 @@ class LayananSelectorWidget extends Widget
 
     protected $listeners = ['filterUpdated' => '$refresh'];
 
+       public static function canView(): bool
+    {
+        // Cek apakah sedang di halaman operasional
+        return request()->routeIs('filament.admin.resources.operasionals.index');
+    }
+
     public $selectedLayanan = null;
     public $showTable = false;
 

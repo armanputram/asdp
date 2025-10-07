@@ -231,7 +231,8 @@
                 ['no' => 10, 'name' => 'CCTV ANPR', 'qty' => 6, 'checks' => [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (6,7)', 'catatan' => '', 'doc' => ''],
                 ['no' => 11, 'name' => 'CCTV Jenis Kendaraan', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Tolgate 1,2,3,4', 'catatan' => '', 'doc' => ''],
                 ['no' => 12, 'name' => 'CCTV Jenis Panjang Kendaraan', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Tolgate 1,2,3,4', 'catatan' => 'https://bit.ly/cekdokumen', 'doc' => ''],
-                ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => '']
+                ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+                  ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
             ];
             @endphp
 
@@ -305,7 +306,9 @@
                 ['no' => 17, 'name' => 'UPS', 'qty' => 6, 'checks' => [1,1,1,0,1,1,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (7,8)', 'catatan' => 'UPS Tidak Bisa Backup (Open Tiket 101522) Perangkat di work bisa IT', 'doc' => ''],
                 ['no' => 18, 'name' => 'Display Tarif & Golongan', 'qty' => 6, 'checks' => [1,1,1,1,1,1,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (6,7)', 'catatan' => 'Display Tarif Tidak munk, arul on perangkat di Gudang IT', 'doc' => ''],
                 ['no' => 19, 'name' => 'Switch (Unmanaged [5 Port] Port)', 'qty' => 8, 'checks' => [1,1,1,1,1,1,1,1,0], 'desc' => 'di dalam panel LCS Truck (1,2,3,4), KK (5,6,7,8)', 'catatan' => '', 'doc' => ''],
-                 ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => '']
+                 ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+                  ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+                   ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => '']
             ];
             @endphp
 
@@ -325,6 +328,275 @@
             @endforeach
         </tbody>
     </table>
+      <table class=" info-tables">
+         <tr>
+            <td colspan="2" class="info-header">
+                TOLGATE (R2)
+            </td>
+        </tr></table>
+    <!-- Section 2: Tolgate -->
+    <table class="main-table">
+        <thead>
+          <tr>
+                <th rowspan="2" class="no-col">No</th>
+                <th rowspan="2" class="perangkat-col">Perangkat</th>
+                <th rowspan="2" class="qty-col">Qty<br>(Unit)</th>
+                <th colspan="4" class="Truck-header">Truck</th>
+                <th colspan="4" class="Truck-header">KK</th>
+                <th colspan="1" class="Truck-header">LCM</th>
+                <th rowspan="2" class="keterangan-col">Keterangan</th>
+                <th rowspan="2" class="catatan-col">Catatan</th>
+                <th rowspan="2" class="doc-col">Dokumentasi</th>
+            </tr>
+            <tr>
+                <th class="check-cols">1</th>
+                <th class="check-cols">2</th>
+                <th class="check-cols">3</th>
+                <th class="check-cols">4</th>
+                <th class="check-cols">5</th>
+                <th class="check-cols">6</th>
+                <th class="check-cols">7</th>
+                <th class="check-cols">8</th>
+                <th class="check-cols">9</th>
+            </tr>
+        </thead>
+        <tbody>
+            @php
+            $tolgate_items = [
+                 ['no' => 1, 'name' => 'Perangkat Barrier Gate', 'qty' => 16, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 2, 'name' => 'Perangkat Barrier Gate (Dosen)', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Gate untuk (entry) Sensor Tolgate 1,2,3,4', 'catatan' => '', 'doc' => ''],
+                ['no' => 3, 'name' => 'Optical Barrier (Dosen)', 'qty' => 'set', 'checks' => [1,1,0,1,0,0,0,0,0], 'desc' => 'Dhl untuk Sensor Sensor Tolgate 1,2,3,4', 'catatan' => 'Kabel Opt Putus (Dosen) (Tiket 101353)', 'doc' => ''],
+                ['no' => 4, 'name' => 'POS', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 5, 'name' => 'Printer', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 6, 'name' => 'Cash Drawer', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 7, 'name' => 'Reader Eticket', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 8, 'name' => 'Reader E-KTP', 'qty' => 9, 'checks' => [0,0,0,0,0,0,0,0,0], 'desc' => 'Terpasang 0, 9 Perangkat disimpan di gudang', 'catatan' => '', 'doc' => ''],
+                ['no' => 9, 'name' => 'Barcode/Qrcode Scanner', 'qty' => 9, 'checks' => [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 10, 'name' => 'CCTV ANPR', 'qty' => 6, 'checks' => [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (6,7)', 'catatan' => '', 'doc' => ''],
+                ['no' => 11, 'name' => 'CCTV Jenis Kendaraan', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Tolgate 1,2,3,4', 'catatan' => '', 'doc' => ''],
+                ['no' => 12, 'name' => 'CCTV Jenis Panjang Kendaraan', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Tolgate 1,2,3,4', 'catatan' => 'https://bit.ly/cekdokumen', 'doc' => ''],
+                ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+                  ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+            ];
+            @endphp
+
+            @foreach($tolgate_items as $item)
+            <tr>
+                <td class="no-col">{{ $item['no'] }}</td>
+                <td class="perangkat-col">{{ $item['name'] }}</td>
+                <td class="qty-col">{{ $item['qty'] }}</td>
+                @for($i = 0; $i < 8; $i++)
+                    <td class="check-cols">{{ $item['checks'][$i] ? '✓' : '' }}</td>
+                @endfor
+                <td class="check-cols">{{ $item['checks'][8] ? '✓' : '' }}</td>
+                <td class="keterangan-col">{{ $item['desc'] }}</td>
+                <td class="catatan-col">{{ $item['catatan'] }}</td>
+                <td class="doc-col">{{ $item['doc'] }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+      <table class=" info-tables">
+         <tr>
+            <td colspan="2" class="info-header">
+                LOKET BULUSAN
+            </td>
+        </tr></table>
+    <!-- Section 2: Tolgate -->
+    <table class="main-table">
+        <thead>
+          <tr>
+                <th rowspan="2" class="no-col">No</th>
+                <th rowspan="2" class="perangkat-col">Perangkat</th>
+                <th rowspan="2" class="qty-col">Qty<br>(Unit)</th>
+                <th colspan="9" class="section-header">Lokasi</th>
+                <th rowspan="2" class="keterangan-col">Keterangan</th>
+                <th rowspan="2" class="catatan-col">Catatan</th>
+                <th rowspan="2" class="doc-col">Dokumentasi</th>
+            </tr>
+            <tr>
+                <th class="check-cols">1</th>
+                <th class="check-cols">2</th>
+                <th class="check-cols">3</th>
+                <th class="check-cols">4</th>
+                <th class="check-cols">5</th>
+                <th class="check-cols">6</th>
+                <th class="check-cols">7</th>
+                <th class="check-cols">8</th>
+                <th class="check-cols">9</th>
+            </tr>
+        </thead>
+        <tbody>
+            @php
+            $tolgate_items = [
+                 ['no' => 1, 'name' => 'Perangkat Barrier Gate', 'qty' => 16, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 2, 'name' => 'Perangkat Barrier Gate (Dosen)', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Gate untuk (entry) Sensor Tolgate 1,2,3,4', 'catatan' => '', 'doc' => ''],
+                ['no' => 3, 'name' => 'Optical Barrier (Dosen)', 'qty' => 'set', 'checks' => [1,1,0,1,0,0,0,0,0], 'desc' => 'Dhl untuk Sensor Sensor Tolgate 1,2,3,4', 'catatan' => 'Kabel Opt Putus (Dosen) (Tiket 101353)', 'doc' => ''],
+                ['no' => 4, 'name' => 'POS', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 5, 'name' => 'Printer', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 6, 'name' => 'Cash Drawer', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 7, 'name' => 'Reader Eticket', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 8, 'name' => 'Reader E-KTP', 'qty' => 9, 'checks' => [0,0,0,0,0,0,0,0,0], 'desc' => 'Terpasang 0, 9 Perangkat disimpan di gudang', 'catatan' => '', 'doc' => ''],
+                ['no' => 9, 'name' => 'Barcode/Qrcode Scanner', 'qty' => 9, 'checks' => [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 10, 'name' => 'CCTV ANPR', 'qty' => 6, 'checks' => [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (6,7)', 'catatan' => '', 'doc' => ''],
+                ['no' => 11, 'name' => 'CCTV Jenis Kendaraan', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Tolgate 1,2,3,4', 'catatan' => '', 'doc' => ''],
+                ['no' => 12, 'name' => 'CCTV Jenis Panjang Kendaraan', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Tolgate 1,2,3,4', 'catatan' => 'https://bit.ly/cekdokumen', 'doc' => ''],
+                ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+                ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+                  ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+            ];
+            @endphp
+
+            @foreach($tolgate_items as $item)
+            <tr>
+                <td class="no-col">{{ $item['no'] }}</td>
+                <td class="perangkat-col">{{ $item['name'] }}</td>
+                <td class="qty-col">{{ $item['qty'] }}</td>
+                @for($i = 0; $i < 8; $i++)
+                    <td class="check-cols">{{ $item['checks'][$i] ? '✓' : '' }}</td>
+                @endfor
+                <td class="check-cols">{{ $item['checks'][8] ? '✓' : '' }}</td>
+                <td class="keterangan-col">{{ $item['desc'] }}</td>
+                <td class="catatan-col">{{ $item['catatan'] }}</td>
+                <td class="doc-col">{{ $item['doc'] }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+ <table class=" info-tables">
+         <tr>
+            <td colspan="2" class="info-header">
+                DERMAGA
+            </td>
+        </tr></table>
+    <!-- Section 2: Tolgate -->
+    <table class="main-table">
+        <thead>
+          <tr>
+                <th rowspan="2" class="no-col">No</th>
+                <th rowspan="2" class="perangkat-col">Perangkat</th>
+                <th rowspan="2" class="qty-col">Qty<br>(Unit)</th>
+                <th colspan="9" class="section-header">Lokasi</th>
+                <th rowspan="2" class="keterangan-col">Keterangan</th>
+                <th rowspan="2" class="catatan-col">Catatan</th>
+                <th rowspan="2" class="doc-col">Dokumentasi</th>
+            </tr>
+            <tr>
+                <th class="check-cols">1</th>
+                <th class="check-cols">2</th>
+                <th class="check-cols">3</th>
+                <th class="check-cols">4</th>
+                <th class="check-cols">5</th>
+                <th class="check-cols">6</th>
+                <th class="check-cols">7</th>
+                <th class="check-cols">8</th>
+                <th class="check-cols">9</th>
+            </tr>
+        </thead>
+        <tbody>
+            @php
+            $tolgate_items = [
+                 ['no' => 1, 'name' => 'Perangkat Barrier Gate', 'qty' => 16, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 2, 'name' => 'Perangkat Barrier Gate (Dosen)', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Gate untuk (entry) Sensor Tolgate 1,2,3,4', 'catatan' => '', 'doc' => ''],
+                ['no' => 3, 'name' => 'Optical Barrier (Dosen)', 'qty' => 'set', 'checks' => [1,1,0,1,0,0,0,0,0], 'desc' => 'Dhl untuk Sensor Sensor Tolgate 1,2,3,4', 'catatan' => 'Kabel Opt Putus (Dosen) (Tiket 101353)', 'doc' => ''],
+                ['no' => 4, 'name' => 'POS', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 5, 'name' => 'Printer', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 6, 'name' => 'Cash Drawer', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 7, 'name' => 'Reader Eticket', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 8, 'name' => 'Reader E-KTP', 'qty' => 9, 'checks' => [0,0,0,0,0,0,0,0,0], 'desc' => 'Terpasang 0, 9 Perangkat disimpan di gudang', 'catatan' => '', 'doc' => ''],
+                ['no' => 9, 'name' => 'Barcode/Qrcode Scanner', 'qty' => 9, 'checks' => [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 10, 'name' => 'CCTV ANPR', 'qty' => 6, 'checks' => [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (6,7)', 'catatan' => '', 'doc' => ''],
+                ['no' => 11, 'name' => 'CCTV Jenis Kendaraan', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Tolgate 1,2,3,4', 'catatan' => '', 'doc' => ''],
+                ['no' => 12, 'name' => 'CCTV Jenis Panjang Kendaraan', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Tolgate 1,2,3,4', 'catatan' => 'https://bit.ly/cekdokumen', 'doc' => ''],
+                ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+                  ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+                  ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+            ];
+            @endphp
+
+            @foreach($tolgate_items as $item)
+            <tr>
+                <td class="no-col">{{ $item['no'] }}</td>
+                <td class="perangkat-col">{{ $item['name'] }}</td>
+                <td class="qty-col">{{ $item['qty'] }}</td>
+                @for($i = 0; $i < 8; $i++)
+                    <td class="check-cols">{{ $item['checks'][$i] ? '✓' : '' }}</td>
+                @endfor
+                <td class="check-cols">{{ $item['checks'][8] ? '✓' : '' }}</td>
+                <td class="keterangan-col">{{ $item['desc'] }}</td>
+                <td class="catatan-col">{{ $item['catatan'] }}</td>
+                <td class="doc-col">{{ $item['doc'] }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+     <table class=" info-tables">
+         <tr>
+            <td colspan="2" class="info-header">
+            RAK SERVER E-Ticketing
+            </td>
+        </tr></table>
+    <!-- Section 2: Tolgate -->
+    <table class="main-table">
+        <thead>
+          <tr>
+                <th rowspan="2" class="no-col">No</th>
+                <th rowspan="2" class="perangkat-col">Perangkat</th>
+                <th rowspan="2" class="qty-col">Qty<br>(Unit)</th>
+                <th colspan="9" class="section-header">Lokasi</th>
+                <th rowspan="2" class="keterangan-col">Keterangan</th>
+                <th rowspan="2" class="catatan-col">Catatan</th>
+                <th rowspan="2" class="doc-col">Dokumentasi</th>
+            </tr>
+            <tr>
+                <th class="check-cols">1</th>
+                <th class="check-cols">2</th>
+                <th class="check-cols">3</th>
+                <th class="check-cols">4</th>
+                <th class="check-cols">5</th>
+                <th class="check-cols">6</th>
+                <th class="check-cols">7</th>
+                <th class="check-cols">8</th>
+                <th class="check-cols">9</th>
+            </tr>
+        </thead>
+        <tbody>
+            @php
+            $tolgate_items = [
+                 ['no' => 1, 'name' => 'Perangkat Barrier Gate', 'qty' => 16, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 2, 'name' => 'Perangkat Barrier Gate (Dosen)', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Gate untuk (entry) Sensor Tolgate 1,2,3,4', 'catatan' => '', 'doc' => ''],
+                ['no' => 3, 'name' => 'Optical Barrier (Dosen)', 'qty' => 'set', 'checks' => [1,1,0,1,0,0,0,0,0], 'desc' => 'Dhl untuk Sensor Sensor Tolgate 1,2,3,4', 'catatan' => 'Kabel Opt Putus (Dosen) (Tiket 101353)', 'doc' => ''],
+                ['no' => 4, 'name' => 'POS', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 5, 'name' => 'Printer', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 6, 'name' => 'Cash Drawer', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 7, 'name' => 'Reader Eticket', 'qty' => 9, 'checks' =>  [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 8, 'name' => 'Reader E-KTP', 'qty' => 9, 'checks' => [0,0,0,0,0,0,0,0,0], 'desc' => 'Terpasang 0, 9 Perangkat disimpan di gudang', 'catatan' => '', 'doc' => ''],
+                ['no' => 9, 'name' => 'Barcode/Qrcode Scanner', 'qty' => 9, 'checks' => [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (5,6,7,8), LCM (9)', 'catatan' => '', 'doc' => ''],
+                ['no' => 10, 'name' => 'CCTV ANPR', 'qty' => 6, 'checks' => [1,1,1,1,1,0,0,0,0], 'desc' => 'Truck (1,2,3,4), KK (6,7)', 'catatan' => '', 'doc' => ''],
+                ['no' => 11, 'name' => 'CCTV Jenis Kendaraan', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Tolgate 1,2,3,4', 'catatan' => '', 'doc' => ''],
+                ['no' => 12, 'name' => 'CCTV Jenis Panjang Kendaraan', 'qty' => 4, 'checks' => [1,1,1,1,0,0,0,0,0], 'desc' => 'Tolgate 1,2,3,4', 'catatan' => 'https://bit.ly/cekdokumen', 'doc' => ''],
+                ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+                  ['no' => '.', 'name' => '', 'qty' => '', 'checks' =>[0,0,0,0,0,0,0,0,0],  'desc' => '', 'catatan' => '', 'doc' => ''],
+            ];
+            @endphp
+
+            @foreach($tolgate_items as $item)
+            <tr>
+                <td class="no-col">{{ $item['no'] }}</td>
+                <td class="perangkat-col">{{ $item['name'] }}</td>
+                <td class="qty-col">{{ $item['qty'] }}</td>
+                @for($i = 0; $i < 8; $i++)
+                    <td class="check-cols">{{ $item['checks'][$i] ? '✓' : '' }}</td>
+                @endfor
+                <td class="check-cols">{{ $item['checks'][8] ? '✓' : '' }}</td>
+                <td class="keterangan-col">{{ $item['desc'] }}</td>
+                <td class="catatan-col">{{ $item['catatan'] }}</td>
+                <td class="doc-col">{{ $item['doc'] }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+
 
 </body>
 </html>

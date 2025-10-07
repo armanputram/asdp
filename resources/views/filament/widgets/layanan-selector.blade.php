@@ -1,4 +1,4 @@
-<x-filament-widgets::widget>
+{{-- <x-filament-widgets::widget>
     <!-- Header dengan tombol reset jika ada layanan terpilih -->
     @if($selectedLayanan)
         <div class="flex justify-between items-center mb-4 p-4 bg-blue-50 rounded-lg">
@@ -187,4 +187,4 @@
             </div>
         </div>
     @endif
-</x-filament-widgets::widget>
+</x-filament-widgets::widget> --}}
