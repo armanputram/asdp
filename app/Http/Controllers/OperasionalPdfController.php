@@ -32,6 +32,7 @@ class OperasionalPdfController extends Controller
 
     public function exportPdfByPelabuhan($id)
     {
+        //apakah ini benar?
         // If you want to export based on pelabuhan data
         $pelabuhan = Pelabuhan::with([
             'layanan.perangkat',
