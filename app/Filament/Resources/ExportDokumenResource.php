@@ -107,34 +107,23 @@ class ExportDokumenResource extends Resource
                     return $indicators;
                 }),
         ])
-        ->actions([
-            Tables\Actions\ViewAction::make(),
+  ->actions([
+            Tables\Actions\DeleteAction::make(),
 
-      Action::make('export_pdf')
-    ->label('Export PDF')
-    ->icon('heroicon-o-document-arrow-down')
-    ->color('success')
-    ->url(fn (Operasional $record) => route('export.pdf', $record->id))
-    ->openUrlInNewTab(),
+            Action::make('export_pdf')
+                ->label('Export PDF')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('success')
+                ->url(fn (Operasional $record) => route('export.pdf', $record->id))
+                ->openUrlInNewTab(),
         ])
+
         ->bulkActions([
-            Tables\Actions\BulkActionGroup::make([
-                Tables\Actions\DeleteBulkAction::make()
-                    ->action(function ($records) {
-                        return static::deleteGroupedRecords($records);
-                    }),
+            Tables\Actions\DeleteBulkAction::make(),
+            // contoh tambahan custom bulk action
 
-                Tables\Actions\BulkAction::make('bulk_export_pdf')
-                    ->label('Export PDF Terpilih')
-                    ->icon('heroicon-o-document-arrow-down')
-                    ->color('success')
-                    ->action(function ($records) {
-                        return static::generateBulkPDFGrouped($records);
-                    })
-                    ->requiresConfirmation()
-                    ->modalDescription('Export semua grup dokumen terpilih ke dalam satu file PDF?'),
-            ]),
         ])
+
         ->defaultSort('created_at', 'desc');
 }
 
@@ -510,6 +499,7 @@ public static function form(Form $form): Form
 
     // Method untuk generate PDF semua layanan dari pelabuhan (sudah ada, diperbaiki)
 // Method untuk generate PDF semua layanan dari pelabuhan (updated)
+// Update method generatePDFAllLayanan di ExportDokumenResource.php
 public static function generatePDFAllLayanan(Operasional $record)
 {
     try {
@@ -526,31 +516,77 @@ public static function generatePDFAllLayanan(Operasional $record)
             ->with(['layanan', 'items.perangkat'])
             ->get();
 
-        // Set data untuk template
-        $tanggal = now()->format('l, F d, Y'); // Format: Wednesday, August 06, 2025
-        $waktu = now()->format('H:i'); // Format: 10:00
+        // Susun data dinamis untuk setiap layanan
+        $checklistData = [];
 
-        // Gunakan template operasional.blade.php yang sudah ada
+        foreach ($allLayanan as $layanan) {
+            $layananItems = [];
+
+            foreach ($layanan->perangkat as $index => $perangkat) {
+                // Cari data operasional items untuk perangkat ini
+                $operasionalItem = null;
+                foreach ($groupedRecords as $opRecord) {
+                    if ($opRecord->layanan_id == $layanan->id) {
+                        $operasionalItem = $opRecord->items->where('perangkat_id', $perangkat->id)->first();
+                        if ($operasionalItem) break;
+                    }
+                }
+
+                // Ambil data qty_check (lokasi yang ter-check)
+                $qtyChecks = [0,0,0,0,0,0,0,0,0];
+                if ($operasionalItem && $operasionalItem->qty_check) {
+                    $checkData = is_string($operasionalItem->qty_check)
+                        ? json_decode($operasionalItem->qty_check, true)
+                        : $operasionalItem->qty_check;
+
+                    if (is_array($checkData)) {
+                        for ($i = 0; $i < min(count($checkData), 9); $i++) {
+                            $qtyChecks[$i] = (int)$checkData[$i];
+                        }
+                    }
+                }
+
+                $layananItems[] = [
+                    'no' => $index + 1,
+                    'name' => $perangkat->nama,
+                    'qty' => $operasionalItem ? $operasionalItem->qty : $perangkat->jumlah_default ?? '-',
+                    'checks' => $qtyChecks,
+                    'desc' => $operasionalItem ? $operasionalItem->keterangan : '',
+                    'catatan' => $operasionalItem ? $operasionalItem->catatan : '',
+                    'doc' => $operasionalItem && $operasionalItem->foto
+                        ? url('storage/' . $operasionalItem->foto)
+                        : '',
+                ];
+            }
+
+            $checklistData[$layanan->nama] = $layananItems;
+        }
+
+        // Format tanggal dan waktu
+        $carbonDate = \Carbon\Carbon::parse($record->created_at);
+        $tanggal = $carbonDate->locale('id')->isoFormat('dddd, MMMM DD, YYYY');
+        $waktu = $carbonDate->format('H:i');
+
+        // Generate PDF
         $pdf = PDF::loadView('pdf.operasional', [
             'operasional' => $record,
             'tanggal' => $tanggal,
             'waktu' => $waktu,
             'pelabuhan' => $record->pelabuhan,
-            'semua_layanan' => $allLayanan,
-            'grouped_records' => $groupedRecords,
+            'checklistData' => $checklistData,
             'tanggal_export' => now(),
             'total_layanan' => $allLayanan->count(),
             'user' => $record->user,
             'cabang' => $record->cabang,
-        ])->setPaper('a4', 'landscape'); // Set landscape sesuai template
+        ])->setPaper('a4', 'landscape');
 
-        $filename = 'export-checklist-' .
+        $filename = 'checklist-' .
                    str_replace(' ', '-', strtolower($record->pelabuhan->nama)) . '-' .
-                   now()->format('Y-m-d-H-i-s') . '.pdf';
+                   $carbonDate->format('Y-m-d') . '.pdf';
 
         Notification::make()
             ->title('PDF Checklist berhasil diexport')
-            ->body('Form Checklist ' . $record->pelabuhan->nama . ' telah digenerate')
+            ->body('Form Checklist ' . $record->pelabuhan->nama . ' - ' . $tanggal)
             ->success()
             ->duration(5000)
             ->send();
@@ -641,8 +677,7 @@ public static function generatePDFAllLayanan(Operasional $record)
         return [
             'index' => Pages\ListExportDokumens::route('/'),
             'create' => Pages\CreateExportDokumen::route('/create'),
-            'view' => Pages\ViewExportDokumen::route('/{record}'),
-            'edit' => Pages\EditExportDokumen::route('/{record}/edit'),
+
         ];
     }
 
