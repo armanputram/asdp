@@ -30,178 +30,209 @@ class OperasionalResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document';
 
-    public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                // Pilih cabang
-                Forms\Components\Select::make('cabang_id')
-                    ->relationship('cabang', 'nama')
-                    ->required()
-                    ->reactive(),
+  public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            // Pilih cabang
+            Forms\Components\Select::make('cabang_id')
+                ->label('Cabang')
+                ->relationship('cabang', 'nama')
+                ->searchable()
+                ->preload()
+                ->required()
+                ->reactive()
+                ->afterStateUpdated(function (callable $set) {
+                    $set('pelabuhan_id', null); // Reset pelabuhan
+                    $set('layanan_id', null); // Reset layanan
+                    $set('items', []); // Reset items
+                }),
 
-                // Pilih pelabuhan
-                Forms\Components\Select::make('pelabuhan_id')
-                    ->relationship('pelabuhan', 'nama')
-                    ->required()
-                    ->reactive(),
+            // Pilih pelabuhan (terfilter berdasarkan cabang)
+            Forms\Components\Select::make('pelabuhan_id')
+                ->label('Pelabuhan')
+                ->options(function (callable $get) {
+                    $cabangId = $get('cabang_id');
 
-                // Pilih layanan (terfilter)
-                Forms\Components\Select::make('layanan_id')
-                    ->label('Layanan')
-                    ->options(function (callable $get) {
-                        $cabangId = $get('cabang_id');
-                        $pelabuhanId = $get('pelabuhan_id');
+                    if (!$cabangId) {
+                        return [];
+                    }
 
-                        if (!$cabangId || !$pelabuhanId) {
-                            return [];
-                        }
+                    return Pelabuhan::where('cabang_id', $cabangId)
+                        ->pluck('nama', 'id');
+                })
+                ->searchable()
+                ->required()
+                ->disabled(fn (callable $get) => !$get('cabang_id'))
+                ->placeholder('Pilih cabang terlebih dahulu')
+                ->reactive()
+                ->afterStateUpdated(function (callable $set) {
+                    $set('layanan_id', null); // Reset layanan
+                    $set('items', []); // Reset items
+                }),
 
-                        return Layanan::where('cabang_id', $cabangId)
+            // Pilih layanan (terfilter berdasarkan cabang & pelabuhan)
+            Forms\Components\Select::make('layanan_id')
+                ->label('Layanan')
+                ->options(function (callable $get) {
+                    $cabangId = $get('cabang_id');
+                    $pelabuhanId = $get('pelabuhan_id');
+
+                    if (!$cabangId || !$pelabuhanId) {
+                        return [];
+                    }
+
+                    return Layanan::where('cabang_id', $cabangId)
+                        ->where('pelabuhan_id', $pelabuhanId)
+                        ->pluck('nama', 'id');
+                })
+                ->searchable()
+                ->required()
+                ->disabled(fn (callable $get) => !$get('cabang_id') || !$get('pelabuhan_id'))
+                ->placeholder('Pilih cabang dan pelabuhan terlebih dahulu')
+                ->reactive()
+                ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                    $cabangId = $get('cabang_id');
+                    $pelabuhanId = $get('pelabuhan_id');
+                    $qtyCheck = $get('qty_check');
+
+                    // Ambil perangkat berdasarkan cabang, pelabuhan, dan layanan
+                    if ($cabangId && $pelabuhanId && $state) {
+                        $perangkatList = Perangkat::where('cabang_id', $cabangId)
                             ->where('pelabuhan_id', $pelabuhanId)
-                            ->pluck('nama', 'id');
-                    })
-                    ->required()
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                        $cabangId = $get('cabang_id');
-                        $pelabuhanId = $get('pelabuhan_id');
-                        $qtyCheck = $get('qty_check'); // Get the selected qty_check value
+                            ->where('layanan_id', $state)
+                            ->get();
 
-                        // Ambil perangkat berdasarkan cabang, pelabuhan, dan layanan
-                        if ($cabangId && $pelabuhanId && $state) {
-                            $perangkatList = Perangkat::where('cabang_id', $cabangId)
-                                ->where('pelabuhan_id', $pelabuhanId)
-                                ->where('layanan_id', $state)
-                                ->get();
-
-                            $items = [];
-                            foreach ($perangkatList as $p) {
-                                $items[] = [
-                                    'perangkat_id' => $p->id,
-                                    'nama' => $p->nama,
-                                    'qty' => $p->qty,
-                                    'qty_check' => $qtyCheck ?? 1, // Add qty_check field
-                                    'status_perangkat' => null,
-                                    'foto' => null,
-                                    'catatan' => null,
-                                    'tanggal' => now()->toDateString(),
-                                    'waktu' => now()->format('H:i'),
-                                ];
-                            }
-                            $set('items', $items);
-                        }
-                    }),
-
-                // Select qty_check (renamed from lokasi)
-                Forms\Components\Select::make('qty_check')
-                    ->label('Titik Lokasi')
-                    ->options([
-                        1 => 'Lokasi 1',
-                        2 => 'Lokasi 2',
-                        3 => 'Lokasi 3',
-                        4 => 'Lokasi 4',
-                        5 => 'Lokasi 5',
-                        6 => 'Lokasi 6',
-                        7 => 'Lokasi 7',
-                        8 => 'Lokasi 8',
-                        9 => 'Lokasi 9',
-                        10 => 'Lokasi 10',
-                    ])
-                    ->required()
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                        // Update existing items with the new qty_check value
-                        $items = $get('items') ?? [];
-                        foreach ($items as $key => $item) {
-                            $items[$key]['qty_check'] = $state;
+                        $items = [];
+                        foreach ($perangkatList as $p) {
+                            $items[] = [
+                                'perangkat_id' => $p->id,
+                                'nama' => $p->nama,
+                                'qty' => $p->qty,
+                                'qty_check' => $qtyCheck ?? 1,
+                                'status_perangkat' => $p->status ?? 'baik',
+                                'foto' => null,
+                                'catatan' => null,
+                                'tanggal' => now()->toDateString(),
+                                'waktu' => now()->format('H:i'),
+                            ];
                         }
                         $set('items', $items);
-                    }),
+                    }
+                }),
 
-                // Repeater items
-                Repeater::make('items')
-                    ->schema([
-                        Select::make('perangkat_id')
-                            ->label('Nama Perangkat')
-                            ->options(function (callable $get) {
-                                $cabangId = $get('../../cabang_id');
-                                $pelabuhanId = $get('../../pelabuhan_id');
-                                $layananId = $get('../../layanan_id');
+            // Select qty_check (titik lokasi)
+            Forms\Components\Select::make('qty_check')
+                ->label('Titik Lokasi')
+                ->options([
+                    1 => 'Loket 1',
+                    2 => 'Loket 2',
+                    3 => 'Loket 3',
+                    4 => 'Loket 4',
+                    5 => 'Loket 5',
+                    6 => 'Loket 6',
+                    7 => 'Loket 7',
+                    8 => 'Loket 8',
+                    9 => 'Loket 9',
+                    10 => 'Loket 10',
+                ])
+                ->required()
+                    ->disabled(fn (callable $get) => !$get('cabang_id') || !$get('pelabuhan_id') || !$get('layanan_id'))
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                        $cabangId = $get('cabang_id');
+                        $pelabuhanId = $get('pelabuhan_id');
+                        $layananId = $get('layanan_id');
+                }),
 
-                                if (!$cabangId || !$pelabuhanId || !$layananId) {
-                                    return [];
+            // Repeater items
+            Repeater::make('items')
+                ->schema([
+                    Select::make('perangkat_id')
+                        ->label('Nama Perangkat')
+                        ->options(function (callable $get) {
+                            $cabangId = $get('../../cabang_id');
+                            $pelabuhanId = $get('../../pelabuhan_id');
+                            $layananId = $get('../../layanan_id');
+
+                            if (!$cabangId || !$pelabuhanId || !$layananId) {
+                                return [];
+                            }
+
+                            return Perangkat::where('cabang_id', $cabangId)
+                                ->where('pelabuhan_id', $pelabuhanId)
+                                ->where('layanan_id', $layananId)
+                                ->pluck('nama', 'id');
+                        })
+                        ->searchable()
+                        ->required()
+                        ->reactive()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if ($state) {
+                                // Ambil status perangkat dari database
+                                $perangkat = Perangkat::find($state);
+
+                                if ($perangkat) {
+                                    // Set status_perangkat otomatis dari database
+                                    $set('status_perangkat', $perangkat->status ?? 'baik');
                                 }
+                            }
+                        }),
 
-                                return Perangkat::where('cabang_id', $cabangId)
-                                    ->where('pelabuhan_id', $pelabuhanId)
-                                    ->where('layanan_id', $layananId)
-                                    ->pluck('nama', 'id');
-                            })
-                            ->searchable()
-                            ->required()
-                            ->reactive(),
+                    // Hidden field for qty_check
+                    Forms\Components\Hidden::make('qty_check')
+                        ->default(function (callable $get) {
+                            return $get('../../qty_check') ?? 1;
+                        }),
 
-                        // Hidden field for qty_check - will be populated from parent
-                        Forms\Components\Hidden::make('qty_check')
-                            ->default(function (callable $get) {
-                                return $get('../../qty_check') ?? 1;
-                            }),
+                    // Radio button status perangkat
+                    Radio::make('status_perangkat')
+                        ->label('Status Perangkat')
+                        ->options([
+                            'baik' => 'Baik',
+                            'rusak' => 'Rusak',
+                        ])
+                        ->inline()
+                        ->inlineLabel(false)
+                        // ->default('baik')
+                        ->required(),
 
-                       // DIGANTI DENGAN RADIO BUTTON
-                        Radio::make('status_perangkat')
-                            ->label('Status Perangkat')
-                            ->options([
-                                'baik' => 'Baik',
-                                'rusak' => 'Rusak',
-                            ])
-                            ->inline()
-                            ->inlineLabel(false)
-                            ->required(),
+                    FileUpload::make('foto')
+                        ->directory('operasionals')
+                        ->image()
+                        ->nullable()
+                        ->getUploadedFileNameForStorageUsing(function (UploadedFile $file, callable $get): string {
+                            $pelabuhanId = $get('../../pelabuhan_id');
+                            $layananId = $get('../../layanan_id');
+                            $perangkatId = $get('perangkat_id');
+                            $qtyCheck = $get('qty_check') ?? $get('../../qty_check') ?? '1';
 
-                        FileUpload::make('foto')
-                            ->directory('operasionals')
-                            ->image()
-                            ->nullable()
-                            ->getUploadedFileNameForStorageUsing(function (UploadedFile $file, callable $get): string {
-                                $pelabuhanId = $get('../../pelabuhan_id');
-                                $layananId = $get('../../layanan_id');
-                                $perangkatId = $get('perangkat_id');
-                                $qtyCheck = $get('qty_check') ?? $get('../../qty_check') ?? '1'; // Use qty_check as string
+                            $tanggal = $get('tanggal') ?? now()->toDateString();
+                            $waktu = $get('waktu') ?? now()->format('H:i');
+                            $datetime = "{$tanggal} {$waktu}";
 
-                                // Ambil tanggal dan waktu dari field form
-                                $tanggal = $get('tanggal') ?? now()->toDateString();
-                                $waktu = $get('waktu') ?? now()->format('H:i');
+                            $pelabuhan = Pelabuhan::find($pelabuhanId)?->nama ?? 'unknown';
+                            $layanan = Layanan::find($layananId)?->nama ?? 'unknown';
+                            $perangkat = Perangkat::find($perangkatId)?->nama ?? 'unknown';
 
-                                // Format tanggal dan waktu dalam format yang mudah dibaca
-                                $datetime = "{$tanggal} {$waktu}";
+                            $pelabuhan = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $pelabuhan);
+                            $layanan = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $layanan);
+                            $perangkat = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $perangkat);
+                            $datetime = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $datetime);
 
-                                // Ambil nama-nama dari database
-                                $pelabuhan = Pelabuhan::find($pelabuhanId)?->nama ?? 'unknown';
-                                $layanan = Layanan::find($layananId)?->nama ?? 'unknown';
-                                $perangkat = Perangkat::find($perangkatId)?->nama ?? 'unknown';
+                            $extension = $file->getClientOriginalExtension();
 
-                                // Bersihkan nama dari karakter yang tidak diinginkan
-                                $pelabuhan = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $pelabuhan);
-                                $layanan = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $layanan);
-                                $perangkat = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $perangkat);
-                                $datetime = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $datetime);
+                            return "{$datetime}.{$pelabuhan}.{$layanan}.{$qtyCheck}.{$perangkat}.{$extension}";
+                        }),
 
-                                // Ambil extension file
-                                $extension = $file->getClientOriginalExtension();
+                    Textarea::make('catatan'),
 
-                                // Format: tanggal_waktu.pelabuhan.layanan.qty_check.perangkat.extension
-                                return "{$datetime}.{$pelabuhan}.{$layanan}.{$qtyCheck}.{$perangkat}.{$extension}";
-                            }),
-
-                        Textarea::make('catatan'),
-
-                        DatePicker::make('tanggal')->required(),
-                        TimePicker::make('waktu')->required(),
-                    ])
-                    ->columns(2),
-            ]);
-    }
+                    DatePicker::make('tanggal')->required(),
+                    TimePicker::make('waktu')->required(),
+                ])
+                ->columns(2),
+        ]);
+}
 
     public static function table(Table $table): Table
     {
@@ -237,12 +268,6 @@ class OperasionalResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
-
-                // Tables\Actions\Action::make('exportPdf')
-                //     ->label('Export PDF')
-                //     ->icon('heroicon-o-document-arrow-down')
-                //     ->url(fn (Model $record) => route('laporan.operasional.pdf', $record->id))
-                //     ->openUrlInNewTab(),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
