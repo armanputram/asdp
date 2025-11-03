@@ -210,7 +210,7 @@ class DatabaseSeeder extends Seeder
         foreach ($perangkatDermaga as $p) {
             DB::table('perangkat')->insert([
                 'nama' => $p['nama'],
-                'qty' => $p['qty'],
+                'qty' => $p['qty'], 
                 'keterangan' => $p['keterangan'],
                 'cabang_id' => $cabangId,
                 'pelabuhan_id' => $pelabuhanId,

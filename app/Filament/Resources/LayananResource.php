@@ -18,6 +18,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
+use Filament\Tables\Filters\SelectFilter;
 
 
 
@@ -28,73 +29,87 @@ class LayananResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-computer-desktop';
     protected static ?string $navigationGroup = 'Data Utama';
 
- public static function form(Form $form): Form
-{
-    return $form
-        ->schema([
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
 
-             Select::make('cabang_id')
-                ->label('Cabang')
-                ->relationship('cabang', 'nama')
-                ->searchable()
-                ->preload()
-                ->required(),
+                Select::make('cabang_id')
+                    ->label('Cabang')
+                    ->relationship('cabang', 'nama')
+                    ->searchable()
+                    ->preload()
+                    ->required(),
 
-            Select::make('pelabuhan_id')
-                ->label('Pelabuhan')
-                ->relationship('pelabuhan', 'nama')
-                ->searchable()
-                ->preload()
-                ->required(),
+                Select::make('pelabuhan_id')
+                    ->label('Pelabuhan')
+                    ->relationship('pelabuhan', 'nama')
+                    ->searchable()
+                    ->preload()
+                    ->required(),
 
 
-            TextInput::make('nama')
-                ->label('Nama Layanan')
-                ->required(),
+                TextInput::make('nama')
+                    ->label('Nama Layanan')
+                    ->required(),
 
-            Repeater::make('perangkat')
-                ->label('Daftar Perangkat')
-                ->relationship()
-                ->schema([
-                    TextInput::make('nama')->label('Nama Perangkat')->required(),
-                    TextInput::make('qty')->label('Jumlah')->numeric()->required(),
+                Repeater::make('perangkat')
+                    ->label('Daftar Perangkat')
+                    ->relationship()
+                    ->schema([
+                        TextInput::make('nama')->label('Nama Perangkat')->required(),
+                        TextInput::make('qty')->label('Jumlah')->numeric()->required(),
 
-                    Textarea::make('keterangan')->label('Keterangan')->nullable()
-                    ->rows(18)
-                    ->cols(20)
-                    ->columnSpanFull(),
-                ])
-                ->collapsible()
-                ->defaultItems(1)
-                ->minItems(1)
-                ->addActionLabel('Tambah Perangkat')
-                ->columns(2),
-        ]);
-}
+                        Textarea::make('keterangan')->label('Keterangan')->nullable()
+                            ->rows(18)
+                            ->cols(20)
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsible()
+                    ->defaultItems(1)
+                    ->minItems(1)
+                    ->addActionLabel('Tambah Perangkat')
+                    ->columns(2),
+            ]);
+    }
+
     public static function table(Table $table): Table
-{
-    return $table
-        ->columns([
-            TextColumn::make('nama')
-                ->label('Nama Layanan')
-                ->sortable()
-                ->searchable(),
+    {
+        return $table
+            ->columns([
+                TextColumn::make('nama')
+                    ->label('Nama Layanan')
+                    ->sortable()
+                    ->searchable(),
 
-             TextColumn::make('cabang.nama')
-                ->label('Cabang'),
+                TextColumn::make('cabang.nama')
+                    ->label('Cabang'),
 
-            TextColumn::make('pelabuhan.nama')
-                ->label('Pelabuhan'),
-        ])
-        ->actions([
-            Tables\Actions\EditAction::make(),
-        ])
-        ->bulkActions([
-            Tables\Actions\BulkActionGroup::make([
-                Tables\Actions\DeleteBulkAction::make(),
-            ]),
-        ]);
-}
+                TextColumn::make('pelabuhan.nama')
+                    ->label('Pelabuhan'),
+            ])
+            ->filters([
+                SelectFilter::make('cabang_id')
+                    ->label('Cabang')
+                    ->relationship('cabang', 'nama')
+                    ->searchable()
+                    ->preload(),
+
+                SelectFilter::make('pelabuhan_id')
+                    ->label('Pelabuhan')
+                    ->relationship('pelabuhan', 'nama')
+                    ->searchable()
+                    ->preload(),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
 
     public static function getRelations(): array
     {
@@ -111,10 +126,12 @@ class LayananResource extends Resource
             'edit' => Pages\EditLayanan::route('/{record}/edit'),
         ];
     }
+
     public static function shouldRegisterNavigation(): bool
     {
         return auth()->user()->can('view_any_layanan');
     }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         // Ambil layanan berdasarkan ID yang dipilih
@@ -126,6 +143,4 @@ class LayananResource extends Resource
 
         return $data;
     }
-
-
 }
