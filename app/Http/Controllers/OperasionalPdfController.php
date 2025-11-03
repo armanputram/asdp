@@ -188,7 +188,7 @@ private function buildChecklistData($allLayanan, $groupedRecords)
                     $catValue = trim($item->catatan);
                     if ($catValue !== '' && strtoupper($catValue) !== 'NULL') {
                         if ($lokasiNumber) {
-                            $catatanPerLokasi[] = "Lokasi {$lokasiNumber}: {$catValue}";
+                            $catatanPerLokasi[] = "Lok {$lokasiNumber}: {$catValue}";
                         } else {
                             $catatanPerLokasi[] = $catValue;
                         }
