@@ -18,6 +18,7 @@ class OperasionalItem extends Model
         'status_perangkat',
         'foto',
         'catatan',
+        'catatan_perangkat_id', // Tambahan untuk referensi ke catatan_perangkat
         'tanggal',
         'waktu',
     ];
@@ -37,13 +38,18 @@ class OperasionalItem extends Model
 
     // Relationships
     public function operasional()
-{
-    return $this->belongsTo(Operasional::class, 'operasional_id');
-}
+    {
+        return $this->belongsTo(Operasional::class, 'operasional_id');
+    }
 
     public function perangkat()
     {
         return $this->belongsTo(Perangkat::class);
+    }
+
+    public function catatanPerangkat()
+    {
+        return $this->belongsTo(CatatanPerangkat::class, 'catatan_perangkat_id');
     }
 
     // Scopes
