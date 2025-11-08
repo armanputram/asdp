@@ -229,32 +229,48 @@
                 </tr>
 
                 {{-- Foreach untuk setiap item perangkat --}}
-              @foreach($items as $index => $item)
-<tr>
-    <td class="no-col">{{ $index + 1 }}</td>
-    <td class="perangkat-col">{{ $item['name'] }}</td>
-    <td class="qty-col">{{ $item['qty'] }}</td>
-    @foreach($item['checks'] as $checkIndex => $check)
-        @php
-            // Cek status untuk lokasi ini secara spesifik
-            $isRusakDiLokasi = isset($item['status_per_lokasi'][$checkIndex])
-                && in_array($item['status_per_lokasi'][$checkIndex], ['rusak']);
-        @endphp
-        <td class="check-cols {{ $check && $isRusakDiLokasi ? 'check-rusak' : '' }}">
-            @if($check)
-                @if($isRusakDiLokasi)
-                    {!! '&#10005;' !!}
-                @else
-                    {!! '&#10003;' !!}
-                @endif
-            @endif
-        </td>
-    @endforeach
-    <td class="keterangan-col">{{ $item['desc'] ?? '-' }}</td>
-    <td class="catatan-col">{{ $item['catatan'] ?? '-' }}</td>
-    <td class="doc-col">{{ $item['doc'] ? 'Ada' : '' }}</td>
-</tr>
-@endforeach
+                @foreach($items as $index => $item)
+                <tr>
+                    <td class="no-col">{{ $item['no'] ?? $index + 1 }}</td>
+                    <td class="perangkat-col">{{ $item['name'] }}</td>
+                    <td class="qty-col">{{ $item['qty'] }}</td>
+                    @foreach($item['checks'] as $checkIndex => $check)
+                        @php
+                            // Cek status untuk lokasi ini secara spesifik
+                            $isRusakDiLokasi = isset($item['status_per_lokasi'][$checkIndex])
+                                && in_array($item['status_per_lokasi'][$checkIndex], ['rusak']);
+                        @endphp
+                        <td class="check-cols {{ $check && $isRusakDiLokasi ? 'check-rusak' : '' }}">
+                            @if($check)
+                                @if($isRusakDiLokasi)
+                                    {!! '&#10005;' !!}
+                                @else
+                                    {!! '&#10003;' !!}
+                                @endif
+                            @endif
+                        </td>
+                    @endforeach
+                    <td class="keterangan-col">{{ $item['desc'] ?? '-' }}</td>
+                    <td class="catatan-col">{{ $item['catatan'] ?? '-' }}</td>
+                    <td class="doc-col">
+                        @if(isset($item['doc_per_lokasi']) && is_array($item['doc_per_lokasi']) && !empty($item['doc_per_lokasi']))
+                            @php
+                                $lokasiDenganDok = [];
+                                foreach($item['doc_per_lokasi'] as $lokasi => $hasDok) {
+                                    if($hasDok) {
+                                        $lokasiDenganDok[] = $lokasi;
+                                    }
+                                }
+                            @endphp
+                            @if(count($lokasiDenganDok) > 0)
+                                Lok: {{ implode(', ', $lokasiDenganDok) }}
+                            @endif
+                        @elseif(isset($item['doc']) && $item['doc'])
+                            {{ $item['doc'] }}
+                        @endif
+                    </td>
+                </tr>
+                @endforeach
 
                 {{-- Tambahan baris kosong setelah setiap layanan --}}
                 @for($i = 0; $i < 2; $i++)
