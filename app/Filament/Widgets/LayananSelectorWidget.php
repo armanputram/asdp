@@ -88,12 +88,6 @@ class LayananSelectorWidget extends Widget
                 'count' => Operasional::whereHas('layanan', fn($q) => $q->where('nama', 'RAK SERVER E-Ticketing'))->count()
             ],
             [
-                'name' => 'RAK SERVER TOLGATE',
-                'icon' => '🗄️',
-                'color' => 'bg-gradient-to-br from-teal-500 to-cyan-600',
-                'count' => Operasional::whereHas('layanan', fn($q) => $q->where('nama', 'RAK SERVER TOLGATE'))->count()
-            ],
-            [
                 'name' => 'DERMAGA',
                 'icon' => '⚓',
                 'color' => 'bg-gradient-to-br from-blue-600 to-teal-600',
@@ -101,13 +95,7 @@ class LayananSelectorWidget extends Widget
             ],
         ];
 
-        array_unshift($layananOptions, [
-            'name' => 'SEMUA LAYANAN',
-            'icon' => '📊',
-            'color' => 'bg-gradient-to-br from-gray-500 to-gray-600',
-            'count' => Operasional::count(),
-            'is_all' => true
-        ]);
+
 
         return [
             'layananOptions' => $layananOptions,

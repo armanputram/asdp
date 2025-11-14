@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Carbon\Carbon;
 
 class CatatanPerangkat extends Model
 {
@@ -90,10 +91,24 @@ class CatatanPerangkat extends Model
         ]);
     }
 
+    /**
+     * Get catatan aktif (belum selesai) atau catatan yang diselesaikan hari ini
+     * Catatan yang diselesaikan kemarin/sebelumnya tidak akan muncul
+     */
     public static function getCatatanAktif($cabangId, $pelabuhanId, $layananId, $perangkatId, $qtyCheck)
     {
+        $today = Carbon::today();
+
         return self::byPerangkat($cabangId, $pelabuhanId, $layananId, $perangkatId, $qtyCheck)
-                    ->aktif()
+                    ->where(function ($query) use ($today) {
+                        // Ambil catatan yang belum selesai
+                        $query->where('is_selesai', false)
+                            // ATAU catatan yang diselesaikan hari ini
+                            ->orWhere(function ($q) use ($today) {
+                                $q->where('is_selesai', true)
+                                  ->whereDate('tanggal_selesai', $today);
+                            });
+                    })
                     ->latest()
                     ->first();
     }
