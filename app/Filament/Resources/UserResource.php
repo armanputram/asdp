@@ -12,6 +12,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class UserResource extends Resource
 {
@@ -24,23 +26,45 @@ class UserResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
+                    ->label('Nama')
                     ->required()
                     ->maxLength(255),
                 Forms\Components\TextInput::make('email')
+                    ->label('Email')
                     ->email()
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true),
                 Forms\Components\TextInput::make('password')
+                    ->label('Password')
                     ->password()
                     ->required()
                     ->hiddenOn('edit')
                     ->maxLength(255),
                 Forms\Components\Select::make('Role')
+                    ->label('Role')
                     ->relationship('roles', 'name')
                     ->multiple()
                     ->preload()
                     ->searchable(),
+
+                // Upload Tanda Tangan
+                Forms\Components\FileUpload::make('signature')
+                    ->label('Tanda Tangan')
+                    ->image()
+                    ->directory('signatures')
+                    ->visibility('public')
+                    ->maxSize(2048)
+                    ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/jpg'])
+                    ->helperText('Upload tanda tangan (PNG/JPG, max 2MB). Disarankan PNG dengan background transparan.')
+                    ->imageEditor()
+                    ->columnSpanFull()
+                    ->getUploadedFileNameForStorageUsing(function (UploadedFile $file, $get): string {
+                        $name = $get('name') ?? 'user';
+                        $name = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $name);
+                        $extension = $file->getClientOriginalExtension();
+                        return "ttd_{$name}.{$extension}";
+                    }),
             ]);
     }
 
@@ -49,20 +73,49 @@ class UserResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('email')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Nama')
+                    ->searchable()
                     ->sortable(),
-                  Tables\Columns\TextColumn::make('roles.name')
+                Tables\Columns\TextColumn::make('email')
+                    ->label('Email')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('roles.name')
+                    ->label('Role')
+                    ->badge()
                     ->searchable(),
+                Tables\Columns\IconColumn::make('has_signature')
+                    ->label('Status TTD')
+                    ->boolean()
+                    ->getStateUsing(fn ($record) => !empty($record->signature))
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('danger'),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Dibuat')
+                    ->dateTime('d/m/Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('roles')
+                    ->relationship('roles', 'name')
+                    ->label('Filter Role')
+                    ->multiple()
+                    ->preload(),
+
+                Tables\Filters\Filter::make('has_signature')
+                    ->label('Sudah Upload TTD')
+                    ->query(fn (Builder $query): Builder => $query->whereNotNull('signature')),
+
+                Tables\Filters\Filter::make('no_signature')
+                    ->label('Belum Upload TTD')
+                    ->query(fn (Builder $query): Builder => $query->whereNull('signature')),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\Layanan;
 use Filament\Tables\Table;
 use Filament\Tables;
+use Filament\Forms;
 
 class ListOperasionals extends ListRecords
 {
@@ -224,7 +225,44 @@ class ListOperasionals extends ListRecords
                         '10' => 'Lokasi 10',
                     ])
                     ->placeholder('Pilih Lokasi'),
+
+                // Filter Tanggal
+                Tables\Filters\Filter::make('tanggal')
+                    ->form([
+                        Forms\Components\DatePicker::make('dari_tanggal')
+                            ->label('Dari Tanggal')
+                            ->placeholder('Pilih tanggal mulai'),
+                        Forms\Components\DatePicker::make('sampai_tanggal')
+                            ->label('Sampai Tanggal')
+                            ->placeholder('Pilih tanggal akhir'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['dari_tanggal'],
+                                fn (Builder $query, $date): Builder => $query->whereHas('items', function ($q) use ($date) {
+                                    $q->whereDate('tanggal', '>=', $date);
+                                }),
+                            )
+                            ->when(
+                                $data['sampai_tanggal'],
+                                fn (Builder $query, $date): Builder => $query->whereHas('items', function ($q) use ($date) {
+                                    $q->whereDate('tanggal', '<=', $date);
+                                }),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['dari_tanggal'] ?? null) {
+                            $indicators['dari_tanggal'] = 'Dari: ' . \Carbon\Carbon::parse($data['dari_tanggal'])->format('d M Y');
+                        }
+                        if ($data['sampai_tanggal'] ?? null) {
+                            $indicators['sampai_tanggal'] = 'Sampai: ' . \Carbon\Carbon::parse($data['sampai_tanggal'])->format('d M Y');
+                        }
+                        return $indicators;
+                    }),
             ])
+
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
