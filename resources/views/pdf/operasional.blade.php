@@ -354,10 +354,10 @@
                 <div style="font-size: 9px; margin-bottom: 22px;">Staff Layanan TI</div>
 
                 <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
-                    @if(file_exists(public_path('storage/signatures/ttd_Dany_Bachtiar.png')))
-                        <img src="{{ public_path('storage/signatures/ttd_Dany_Bachtiar.png') }}" alt="TTD Staff TI" class="signature-img">
-                    @elseif(file_exists(public_path('storage/signatures/ttd_Dany_Bachtiar.jpg')))
-                        <img src="{{ public_path('storage/signatures/ttd_Dany_Bachtiar.jpg') }}" alt="TTD Staff TI" class="signature-img">
+                    @if(file_exists(public_path('storage/signatures/ttd_Dany_Bachtiar_.png')))
+                        <img src="{{ public_path('storage/signatures/ttd_Dany_Bachtiar_.png') }}" alt="TTD Staff TI" class="signature-img">
+                    @elseif(file_exists(public_path('storage/signatures/ttd_Dany_Bachtiar_.jpg')))
+                        <img src="{{ public_path('storage/signatures/ttd_Dany_Bachtiar_.jpg') }}" alt="TTD Staff TI" class="signature-img">
                     @endif
                 </div>
 
@@ -374,10 +374,10 @@
                 <div style="font-size: 9px; margin-bottom: 8px;">Penanggungjawab TI Cabang</div>
 
                 <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
-                    @if(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo.png')))
-                        <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo.png') }}" alt="TTD PJ TI" class="signature-img">
-                    @elseif(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo.jpg')))
-                        <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo.jpg') }}" alt="TTD PJ TI" class="signature-img">
+                    @if(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo_.png')))
+                        <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo_.png') }}" alt="TTD PJ TI" class="signature-img">
+                    @elseif(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo_.jpg')))
+                        <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo_.jpg') }}" alt="TTD PJ TI" class="signature-img">
                     @endif
                 </div>
 
