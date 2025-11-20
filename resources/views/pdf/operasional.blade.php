@@ -303,92 +303,118 @@
         </table>
     @endif
 
-    <!-- Signature Section -->
-    <table style="width: 100%; margin-top: 20px; border: none; border-collapse: collapse;">
-        <tr>
-            {{-- Pembuat (Petugas TI) - Dinamis dari user yang buat --}}
-            <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
-                <div style="font-size: 9px; margin-bottom: 2px;">Pembuat</div>
-                <div style="font-size: 9px; margin-bottom: 8px;">Petugas TI</div>
+   <!-- Signature Section -->
+<table style="width: 100%; margin-top: 20px; border: none; border-collapse: collapse;">
+    <tr>
+        {{-- Pembuat (Petugas TI) - Dinamis dari user yang buat --}}
+        <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
+            <div style="font-size: 9px; margin-bottom: 2px;">Pembuat</div>
+            <div style="font-size: 9px; margin-bottom: 8px;">Petugas TI</div>
 
-                <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
-                    @php
-                        // Ambil user pembuat dari operasional
-                        $petugasTI = $operasional->user ?? null;
-                        $ttdPetugasPath = null;
+            <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
+                @php
+                    // Ambil user pembuat dari operasional
+                    $petugasTI = $operasional->user ?? null;
+                    $ttdPetugasPath = null;
 
-                        if ($petugasTI && $petugasTI->signature) {
+                    if ($petugasTI && $petugasTI->signature) {
+                        // Bersihkan path dari 'storage/' jika ada
+                        $signaturePath = str_replace('storage/', '', $petugasTI->signature);
+
+                        // Coba beberapa kemungkinan path
+                        $possiblePaths = [
+                            public_path('storage/' . $signaturePath),
+                            public_path($petugasTI->signature),
+                            public_path('storage/signatures/' . basename($petugasTI->signature)),
+                        ];
+
+                        foreach ($possiblePaths as $path) {
+                            if (file_exists($path)) {
+                                $ttdPetugasPath = $path;
+                                break;
+                            }
+                        }
+                    }
+                @endphp
+
+                @if($ttdPetugasPath && file_exists($ttdPetugasPath))
+                    <img src="{{ $ttdPetugasPath }}" alt="TTD Petugas TI" class="signature-img">
+                @endif
+            </div>
+
+            <div style="text-align: center; margin-top: 5px;">
+                <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
+                    <span style="font-size: 9px;">( <strong>{{ strtoupper($petugasTI->name ?? '-') }}</strong> )</span>
+                </span>
+            </div>
+        </td>
+
+        {{-- Staff Layanan TI - DINAMIS dari relasi staffIt --}}
+        <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
+            <div style="font-size: 9px; margin-bottom: 22px;">Staff Layanan TI</div>
+
+            <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
+                @php
+                    // Ambil Staff IT dari relasi Petugas TI
+                    $staffIT = null;
+                    $ttdStaffPath = null;
+
+                    if ($petugasTI) {
+                        $staffIT = $petugasTI->staffIt; // Relasi ke atasan (Staff IT)
+
+                        if ($staffIT && $staffIT->signature) {
                             // Bersihkan path dari 'storage/' jika ada
-                            $signaturePath = str_replace('storage/', '', $petugasTI->signature);
+                            $signaturePath = str_replace('storage/', '', $staffIT->signature);
 
                             // Coba beberapa kemungkinan path
                             $possiblePaths = [
                                 public_path('storage/' . $signaturePath),
-                                public_path($petugasTI->signature),
-                                public_path('storage/signatures/' . basename($petugasTI->signature)),
+                                public_path($staffIT->signature),
+                                public_path('storage/signatures/' . basename($staffIT->signature)),
                             ];
 
                             foreach ($possiblePaths as $path) {
                                 if (file_exists($path)) {
-                                    $ttdPetugasPath = $path;
+                                    $ttdStaffPath = $path;
                                     break;
                                 }
                             }
                         }
-                    @endphp
+                    }
+                @endphp
 
-                    @if($ttdPetugasPath && file_exists($ttdPetugasPath))
-                        <img src="{{ $ttdPetugasPath }}" alt="TTD Petugas TI" class="signature-img">
-                    @endif
-                </div>
+                @if($ttdStaffPath && file_exists($ttdStaffPath))
+                    <img src="{{ $ttdStaffPath }}" alt="TTD Staff TI" class="signature-img">
+                @endif
+            </div>
 
-                <div style="text-align: center; margin-top: 5px;">
-                    <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
-                        <span style="font-size: 9px;">( <strong>{{ strtoupper($petugasTI->name ?? '-') }}</strong> )</span>
-                    </span>
-                </div>
-            </td>
+            <div style="text-align: center; margin-top: 5px;">
+                <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
+                    <span style="font-size: 9px;">( <strong>{{ strtoupper($staffIT->name ?? '-') }}</strong> )</span>
+                </span>
+            </div>
+        </td>
 
-            {{-- Staff Layanan TI - Static --}}
-            <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
-                <div style="font-size: 9px; margin-bottom: 22px;">Staff Layanan TI</div>
+        {{-- Penanggungjawab TI Cabang - Static (Susilo Wardoyo) --}}
+        <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
+            <div style="font-size: 9px; margin-bottom: 2px;">Mengetahui</div>
+            <div style="font-size: 9px; margin-bottom: 8px;">Penanggungjawab TI Cabang</div>
 
-                <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
-                    @if(file_exists(public_path('storage/signatures/ttd_Dany_Bachtiar_.png')))
-                        <img src="{{ public_path('storage/signatures/ttd_Dany_Bachtiar_.png') }}" alt="TTD Staff TI" class="signature-img">
-                    @elseif(file_exists(public_path('storage/signatures/ttd_Dany_Bachtiar_.jpg')))
-                        <img src="{{ public_path('storage/signatures/ttd_Dany_Bachtiar_.jpg') }}" alt="TTD Staff TI" class="signature-img">
-                    @endif
-                </div>
+            <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
+                @if(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo.png')))
+                    <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo.png') }}" alt="TTD PJ TI" class="signature-img">
+                @elseif(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo.jpg')))
+                    <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo.jpg') }}" alt="TTD PJ TI" class="signature-img">
+                @endif
+            </div>
 
-                <div style="text-align: center; margin-top: 5px;">
-                    <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
-                        <span style="font-size: 9px;">( <strong>DANY BACHTIAR</strong> )</span>
-                    </span>
-                </div>
-            </td>
-
-            {{-- Penanggungjawab TI Cabang - Static --}}
-            <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
-                <div style="font-size: 9px; margin-bottom: 2px;">Mengetahui</div>
-                <div style="font-size: 9px; margin-bottom: 8px;">Penanggungjawab TI Cabang</div>
-
-                <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
-                    @if(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo_.png')))
-                        <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo_.png') }}" alt="TTD PJ TI" class="signature-img">
-                    @elseif(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo_.jpg')))
-                        <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo_.jpg') }}" alt="TTD PJ TI" class="signature-img">
-                    @endif
-                </div>
-
-                <div style="text-align: center; margin-top: 5px;">
-                    <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
-                        <span style="font-size: 9px;">( <strong>SUSILO WARDOYO</strong> )</span>
-                    </span>
-                </div>
-            </td>
-        </tr>
-    </table>
-
+            <div style="text-align: center; margin-top: 5px;">
+                <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
+                    <span style="font-size: 9px;">( <strong>SUSILO WARDOYO</strong> )</span>
+                </span>
+            </div>
+        </td>
+    </tr>
+</table>
 </body>
 </html>

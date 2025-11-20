@@ -29,24 +29,44 @@ class UserResource extends Resource
                     ->label('Nama')
                     ->required()
                     ->maxLength(255),
+
                 Forms\Components\TextInput::make('email')
                     ->label('Email')
                     ->email()
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true),
+
                 Forms\Components\TextInput::make('password')
                     ->label('Password')
                     ->password()
                     ->required()
                     ->hiddenOn('edit')
                     ->maxLength(255),
+
                 Forms\Components\Select::make('Role')
                     ->label('Role')
                     ->relationship('roles', 'name')
                     ->multiple()
                     ->preload()
-                    ->searchable(),
+                    ->searchable()
+                    ->columnSpanFull(),
+
+                // Select Staff IT (Atasan)
+                Forms\Components\Select::make('staff_it_id')
+                    ->label('Staff IT (Atasan)')
+                    ->relationship(
+                        name: 'staffIt',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn (Builder $query) => $query->whereHas('roles', function($q) {
+                            $q->where('name', 'Staff IT');
+                        })
+                    )
+                    ->searchable()
+                    ->preload()
+                    ->nullable()
+                    ->helperText('Pilih Staff IT yang menjadi atasan. Kosongkan jika user ini adalah Staff IT atau tidak punya atasan.')
+                    ->columnSpanFull(),
 
                 // Upload Tanda Tangan
                 Forms\Components\FileUpload::make('signature')
@@ -76,14 +96,32 @@ class UserResource extends Resource
                     ->label('Nama')
                     ->searchable()
                     ->sortable(),
+
                 Tables\Columns\TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
                     ->sortable(),
+
                 Tables\Columns\TextColumn::make('roles.name')
                     ->label('Role')
                     ->badge()
                     ->searchable(),
+
+                Tables\Columns\TextColumn::make('staffIt.name')
+                    ->label('Staff IT (Atasan)')
+                    ->searchable()
+                    ->sortable()
+                    ->default('-')
+                    ->badge()
+                    ->color('info'),
+
+                Tables\Columns\TextColumn::make('petugasTi_count')
+                    ->label('Jumlah Bawahan')
+                    ->counts('petugasTi')
+                    ->badge()
+                    ->color('success')
+                    ->toggleable(),
+
                 Tables\Columns\IconColumn::make('has_signature')
                     ->label('Status TTD')
                     ->boolean()
@@ -92,6 +130,7 @@ class UserResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger'),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d/m/Y')
@@ -105,6 +144,24 @@ class UserResource extends Resource
                     ->multiple()
                     ->preload(),
 
+                Tables\Filters\SelectFilter::make('staff_it_id')
+                    ->relationship('staffIt', 'name')
+                    ->label('Filter Staff IT')
+                    ->searchable()
+                    ->preload(),
+
+                Tables\Filters\Filter::make('is_staff_it')
+                    ->label('Hanya Staff IT')
+                    ->query(fn (Builder $query): Builder =>
+                        $query->whereHas('roles', function($q) {
+                            $q->where('name', 'Staff IT');
+                        })
+                    ),
+
+                Tables\Filters\Filter::make('has_staff_it')
+                    ->label('Punya Atasan (Staff IT)')
+                    ->query(fn (Builder $query): Builder => $query->whereNotNull('staff_it_id')),
+
                 Tables\Filters\Filter::make('has_signature')
                     ->label('Sudah Upload TTD')
                     ->query(fn (Builder $query): Builder => $query->whereNotNull('signature')),
@@ -114,6 +171,10 @@ class UserResource extends Resource
                     ->query(fn (Builder $query): Builder => $query->whereNull('signature')),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->modalContent(fn ($record) => view('filament.resources.user.view-hierarchy', ['user' => $record]))
+                    ->modalHeading(fn ($record) => 'Hierarki: ' . $record->name)
+                    ->slideOver(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
