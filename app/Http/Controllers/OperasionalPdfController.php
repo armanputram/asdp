@@ -14,6 +14,7 @@ class OperasionalPdfController extends Controller
         try {
             // Ambil data operasional
             $operasional = Operasional::with([
+                'user.staffIt',
                 'cabang',
                 'pelabuhan',
                 'layanan',
@@ -236,6 +237,7 @@ class OperasionalPdfController extends Controller
     {
         try {
             $operasional = Operasional::with([
+                'user.staffIt',
                 'cabang',
                 'pelabuhan',
                 'layanan',
