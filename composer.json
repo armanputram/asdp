@@ -11,9 +11,9 @@
         "bezhansalleh/filament-shield": "*",
         "filament/filament": "^3.3",
         "filament/forms": "^3.3",
-        "google-gemini-php/laravel": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
+        "leandrocfe/filament-apex-charts": "^3.2",
         "spatie/laravel-permission": "^6.21"
     },
     "require-dev": {
