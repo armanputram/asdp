@@ -33,4 +33,8 @@ class Pelabuhan extends Model
     {
         return $this->hasMany(Perangkat::class);
     }
+    public function layanans()
+{
+    return $this->hasMany(Layanan::class);
+}
 }

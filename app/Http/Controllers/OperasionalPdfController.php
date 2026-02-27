@@ -12,17 +12,14 @@ class OperasionalPdfController extends Controller
     public function exportPdf($id)
     {
         try {
-            // Ambil data operasional
             $operasional = Operasional::with([
-                'user.staffIt',
+                'user',
                 'cabang',
                 'pelabuhan',
                 'layanan',
-                'user',
                 'items'
             ])->findOrFail($id);
 
-            // Ambil semua layanan dari pelabuhan
             $allLayanan = Layanan::with('perangkat')
                 ->where('pelabuhan_id', $operasional->pelabuhan_id)
                 ->get();
@@ -31,70 +28,77 @@ class OperasionalPdfController extends Controller
                 return response("Tidak ada layanan terdaftar untuk pelabuhan ini", 404);
             }
 
-            // Ambil grouped records dengan items
+            // Ambil semua operasional di pelabuhan + cabang + hari yang sama
+            // TANPA filter user_id — semua petugas yang mengisi digabung
             $groupedRecords = Operasional::where('pelabuhan_id', $operasional->pelabuhan_id)
                 ->whereDate('created_at', $operasional->created_at->format('Y-m-d'))
                 ->where('cabang_id', $operasional->cabang_id)
-                ->where('user_id', $operasional->user_id)
                 ->with(['layanan', 'items.perangkat'])
                 ->get();
 
-            // Debug log
             Log::info('PDF Generation - Grouped Records:', [
-                'total' => $groupedRecords->count(),
-                'data' => $groupedRecords->map(function($rec) {
+                'total'      => $groupedRecords->count(),
+                'pelabuhan'  => $operasional->pelabuhan_id,
+                'tanggal'    => $operasional->created_at->format('Y-m-d'),
+                'user_count' => $groupedRecords->pluck('user_id')->unique()->count(),
+                'data'       => $groupedRecords->map(function ($rec) {
                     return [
-                        'id' => $rec->id,
-                        'layanan' => $rec->layanan->nama ?? null,
-                        'items_count' => $rec->items->count(),
-                        'items_detail' => $rec->items->map(function($item) {
+                        'id'           => $rec->id,
+                        'user_id'      => $rec->user_id,
+                        'layanan'      => $rec->layanan->nama ?? null,
+                        'items_count'  => $rec->items->count(),
+                        'items_detail' => $rec->items->map(function ($item) {
                             return [
-                                'id' => $item->id,
-                                'perangkat_id' => $item->perangkat_id,
-                                'perangkat_nama' => $item->perangkat->nama ?? 'N/A',
-                                'qty_check' => $item->qty_check,
-                                'keterangan' => $item->keterangan ?? 'NULL',
-                                'catatan' => $item->catatan ?? 'NULL',
+                                'id'               => $item->id,
+                                'perangkat_id'     => $item->perangkat_id,
+                                'perangkat_nama'   => $item->perangkat->nama ?? 'N/A',
+                                'qty_check'        => $item->qty_check,
+                                'keterangan'       => $item->keterangan ?? 'NULL',
+                                'catatan'          => $item->catatan ?? 'NULL',
                                 'status_perangkat' => $item->status_perangkat ?? 'NULL',
-                                'foto' => $item->foto ?? 'NULL',
-                                'all_attributes' => $item->getAttributes(),
+                                'foto'             => $item->foto ?? 'NULL',
+                                'all_attributes'   => $item->getAttributes(),
                             ];
                         })
                     ];
                 })
             ]);
 
-            // Build checklist data
             $checklistData = $this->buildChecklistData($allLayanan, $groupedRecords);
 
             if (empty($checklistData)) {
                 return response("Tidak ada data perangkat untuk ditampilkan", 404);
             }
 
-            // Format tanggal
             $carbonDate = \Carbon\Carbon::parse($operasional->created_at);
-            $tanggal = $carbonDate->locale('id')->isoFormat('dddd, MMMM DD, YYYY');
-            $waktu = $carbonDate->format('H:i');
+            $tanggal    = $carbonDate->locale('id')->isoFormat('dddd, MMMM DD, YYYY');
+            $waktu      = $carbonDate->format('H:i');
 
-            // Generate PDF
+            $validatedByUser = $operasional->is_validated
+                ? \App\Models\User::find($operasional->validated_by)
+                : null;
+
             $pdf = Pdf::loadView('pdf.operasional', [
-                'operasional' => $operasional,
-                'tanggal' => $tanggal,
-                'waktu' => $waktu,
-                'pelabuhan' => $operasional->pelabuhan,
-                'checklistData' => $checklistData,
+                'operasional'    => $operasional,
+                'tanggal'        => $tanggal,
+                'waktu'          => $waktu,
+                'pelabuhan'      => $operasional->pelabuhan,
+                'checklistData'  => $checklistData,
                 'tanggal_export' => now(),
-                'total_layanan' => count($checklistData),
-                'user' => $operasional->user,
-                'cabang' => $operasional->cabang,
+                'total_layanan'  => count($checklistData),
+                'user'           => $operasional->user,
+                'cabang'         => $operasional->cabang,
+                'is_validated'   => $operasional->is_validated,
+                'validated_by'   => $validatedByUser,
+                'validated_at'   => $operasional->validated_at,
             ])
             ->setPaper('a4', 'landscape')
             ->setOption('isHtml5ParserEnabled', true)
             ->setOption('isRemoteEnabled', true);
 
             $filename = 'checklist-' .
-                       \Illuminate\Support\Str::slug($operasional->pelabuhan->nama) . '-' .
-                       $carbonDate->format('Y-m-d') . '.pdf';
+                \Illuminate\Support\Str::slug($operasional->pelabuhan->nama) . '-' .
+                $carbonDate->format('Y-m-d') . '.pdf';
 
             return $pdf->stream($filename);
 
@@ -104,17 +108,17 @@ class OperasionalPdfController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error generating PDF: ' . $e->getMessage(), [
-                'id' => $id,
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
+                'id'    => $id,
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
-                'error' => 'Terjadi kesalahan saat generate PDF',
+                'error'   => 'Terjadi kesalahan saat generate PDF',
                 'message' => $e->getMessage(),
-                'file' => basename($e->getFile()),
-                'line' => $e->getLine(),
+                'file'    => basename($e->getFile()),
+                'line'    => $e->getLine(),
             ], 500);
         }
     }
@@ -148,14 +152,13 @@ class OperasionalPdfController extends Controller
                     continue;
                 }
 
-                // Status, checks, dan dokumentasi per lokasi
-                $qtyChecks = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-                $statusPerLokasi = []; // Array untuk menyimpan status tiap lokasi
-                $docPerLokasi = []; // BARU: Array untuk track dokumentasi per lokasi
-                $qty = 0;
-                $keterangan = [];
+                $qtyChecks        = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+                $statusPerLokasi  = [];
+                $docPerLokasi     = [];
+                $qty              = 0;
+                $keterangan       = [];
                 $catatanPerLokasi = [];
-                $hasPhoto = false;
+                $hasPhoto         = false;
 
                 foreach ($allItemsForPerangkat as $item) {
                     $lokasiNumber = null;
@@ -164,15 +167,13 @@ class OperasionalPdfController extends Controller
                         $qtyCheckValue = is_string($item->qty_check) ? (int)$item->qty_check : $item->qty_check;
 
                         if ($qtyCheckValue > 0 && $qtyCheckValue <= 9) {
-                            $checkIndex = $qtyCheckValue - 1;
+                            $checkIndex             = $qtyCheckValue - 1;
                             $qtyChecks[$checkIndex] = 1;
-                            $lokasiNumber = $qtyCheckValue;
+                            $lokasiNumber           = $qtyCheckValue;
 
-                            // Simpan status untuk lokasi ini
-                            $itemStatus = isset($item->status_perangkat) ? strtolower(trim($item->status_perangkat)) : 'baik';
+                            $itemStatus                   = isset($item->status_perangkat) ? strtolower(trim($item->status_perangkat)) : 'baik';
                             $statusPerLokasi[$checkIndex] = $itemStatus;
 
-                            // BARU: Track dokumentasi untuk lokasi ini
                             if (isset($item->foto) && !empty($item->foto)) {
                                 $docPerLokasi[$lokasiNumber] = true;
                                 $hasPhoto = true;
@@ -184,7 +185,6 @@ class OperasionalPdfController extends Controller
                         $qty = $item->qty;
                     }
 
-                    // Keterangan dari perangkat
                     if (isset($item->perangkat->keterangan) && $item->perangkat->keterangan) {
                         $ketValue = trim($item->perangkat->keterangan);
                         if ($ketValue !== '' && strtoupper($ketValue) !== 'NULL') {
@@ -192,7 +192,6 @@ class OperasionalPdfController extends Controller
                         }
                     }
 
-                    // Catatan dengan info lokasi
                     if (isset($item->catatan) && $item->catatan) {
                         $catValue = trim($item->catatan);
                         if ($catValue !== '' && strtoupper($catValue) !== 'NULL') {
@@ -209,19 +208,16 @@ class OperasionalPdfController extends Controller
                     $qty = $perangkat->qty ?? '-';
                 }
 
-                $keteranganStr = !empty($keterangan) ? implode(', ', array_unique($keterangan)) : '-';
-                $catatanStr = !empty($catatanPerLokasi) ? implode(', ', $catatanPerLokasi) : '-';
-
                 $layananItems[] = [
-                    'no' => $index + 1,
-                    'name' => $perangkat->nama ?? 'Perangkat',
-                    'qty' => $qty,
-                    'checks' => $qtyChecks,
-                    'status_per_lokasi' => $statusPerLokasi, // Status per lokasi
-                    'doc_per_lokasi' => $docPerLokasi, // BARU: Dokumentasi per lokasi
-                    'desc' => $keteranganStr,
-                    'catatan' => $catatanStr,
-                    'doc' => $hasPhoto ? 'Ada' : '', // Keep untuk backward compatibility
+                    'no'                => $index + 1,
+                    'name'              => $perangkat->nama ?? 'Perangkat',
+                    'qty'               => $qty,
+                    'checks'            => $qtyChecks,
+                    'status_per_lokasi' => $statusPerLokasi,
+                    'doc_per_lokasi'    => $docPerLokasi,
+                    'desc'              => !empty($keterangan) ? implode(', ', array_unique($keterangan)) : '-',
+                    'catatan'           => !empty($catatanPerLokasi) ? implode(', ', $catatanPerLokasi) : '-',
+                    'doc'               => $hasPhoto ? 'Ada' : '',
                 ];
             }
 
@@ -237,11 +233,10 @@ class OperasionalPdfController extends Controller
     {
         try {
             $operasional = Operasional::with([
-                'user.staffIt',
+                'user',
                 'cabang',
                 'pelabuhan',
                 'layanan',
-                'user',
                 'items'
             ])->findOrFail($id);
 
@@ -249,34 +244,41 @@ class OperasionalPdfController extends Controller
                 ->where('pelabuhan_id', $operasional->pelabuhan_id)
                 ->get();
 
+            // Semua operasional di pelabuhan + cabang + hari (semua user)
             $groupedRecords = Operasional::where('pelabuhan_id', $operasional->pelabuhan_id)
                 ->whereDate('created_at', $operasional->created_at->format('Y-m-d'))
                 ->where('cabang_id', $operasional->cabang_id)
-                ->where('user_id', $operasional->user_id)
                 ->with(['layanan', 'items'])
                 ->get();
 
             $checklistData = $this->buildChecklistData($allLayanan, $groupedRecords);
 
             $carbonDate = \Carbon\Carbon::parse($operasional->created_at);
-            $tanggal = $carbonDate->locale('id')->isoFormat('dddd, MMMM DD, YYYY');
-            $waktu = $carbonDate->format('H:i');
+            $tanggal    = $carbonDate->locale('id')->isoFormat('dddd, MMMM DD, YYYY');
+            $waktu      = $carbonDate->format('H:i');
+
+            $validatedByUser = $operasional->is_validated
+                ? \App\Models\User::find($operasional->validated_by)
+                : null;
 
             $pdf = Pdf::loadView('pdf.operasional', [
-                'operasional' => $operasional,
-                'tanggal' => $tanggal,
-                'waktu' => $waktu,
-                'pelabuhan' => $operasional->pelabuhan,
-                'checklistData' => $checklistData,
+                'operasional'    => $operasional,
+                'tanggal'        => $tanggal,
+                'waktu'          => $waktu,
+                'pelabuhan'      => $operasional->pelabuhan,
+                'checklistData'  => $checklistData,
                 'tanggal_export' => now(),
-                'total_layanan' => count($checklistData),
-                'user' => $operasional->user,
-                'cabang' => $operasional->cabang,
+                'total_layanan'  => count($checklistData),
+                'user'           => $operasional->user,
+                'cabang'         => $operasional->cabang,
+                'is_validated'   => $operasional->is_validated,
+                'validated_by'   => $validatedByUser,
+                'validated_at'   => $operasional->validated_at,
             ])->setPaper('a4', 'landscape');
 
             $filename = 'checklist-' .
-                       \Illuminate\Support\Str::slug($operasional->pelabuhan->nama) . '-' .
-                       $carbonDate->format('Y-m-d') . '.pdf';
+                \Illuminate\Support\Str::slug($operasional->pelabuhan->nama) . '-' .
+                $carbonDate->format('Y-m-d') . '.pdf';
 
             return $pdf->download($filename);
 

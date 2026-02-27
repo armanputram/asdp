@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Operasional extends Model
 {
@@ -43,5 +44,9 @@ public function items()
     {
         return $this->belongsTo(Layanan::class);
     }
+    public function validatedBy(): BelongsTo
+{
+    return $this->belongsTo(User::class, 'validated_by');
+}
 
 }

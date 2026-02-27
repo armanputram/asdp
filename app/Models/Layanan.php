@@ -33,4 +33,10 @@ class Layanan extends Model
     {
         return $this->hasMany(Perangkat::class, 'layanan_id');
     }
+      public function operasionals()
+    {
+        return $this->hasMany(Operasional::class);
+    }
+
+
 }

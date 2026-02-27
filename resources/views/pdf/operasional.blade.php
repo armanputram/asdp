@@ -202,7 +202,6 @@
     @if(isset($checklistData) && !empty($checklistData))
         {{-- Tabel Gabungan Semua Layanan --}}
         <table class="main-table">
-            {{-- Foreach untuk setiap layanan --}}
             @foreach($checklistData as $layananNama => $items)
                 {{-- Header Layanan --}}
                 <tr>
@@ -233,7 +232,6 @@
                     <th class="check-cols">9</th>
                 </tr>
 
-                {{-- Foreach untuk setiap item perangkat --}}
                 @foreach($items as $index => $item)
                 <tr>
                     <td class="no-col">{{ $item['no'] ?? $index + 1 }}</td>
@@ -241,7 +239,6 @@
                     <td class="qty-col">{{ $item['qty'] }}</td>
                     @foreach($item['checks'] as $checkIndex => $check)
                         @php
-                            // Cek status untuk lokasi ini secara spesifik
                             $isRusakDiLokasi = isset($item['status_per_lokasi'][$checkIndex])
                                 && in_array($item['status_per_lokasi'][$checkIndex], ['rusak']);
                         @endphp
@@ -262,9 +259,7 @@
                             @php
                                 $lokasiDenganDok = [];
                                 foreach($item['doc_per_lokasi'] as $lokasi => $hasDok) {
-                                    if($hasDok) {
-                                        $lokasiDenganDok[] = $lokasi;
-                                    }
+                                    if($hasDok) $lokasiDenganDok[] = $lokasi;
                                 }
                             @endphp
                             @if(count($lokasiDenganDok) > 0)
@@ -277,7 +272,6 @@
                 </tr>
                 @endforeach
 
-                {{-- Tambahan baris kosong setelah setiap layanan --}}
                 @for($i = 0; $i < 2; $i++)
                 <tr>
                     <td class="no-col">.</td>
@@ -303,118 +297,102 @@
         </table>
     @endif
 
-   <!-- Signature Section -->
-<table style="width: 100%; margin-top: 20px; border: none; border-collapse: collapse;">
-    <tr>
-        {{-- Pembuat (Petugas TI) - Dinamis dari user yang buat --}}
-        <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
-            <div style="font-size: 9px; margin-bottom: 2px;">Pembuat</div>
-            <div style="font-size: 9px; margin-bottom: 8px;">Petugas TI</div>
+    <!-- Signature Section -->
+    <table style="width: 100%; margin-top: 20px; border: none; border-collapse: collapse;">
+        <tr>
+            {{-- Kolom 1: Pembuat (Petugas TI) --}}
+            <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
+                <div style="font-size: 9px; margin-bottom: 2px;">Pembuat</div>
+                <div style="font-size: 9px; margin-bottom: 8px;">Petugas TI</div>
 
-            <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
-                @php
-                    // Ambil user pembuat dari operasional
-                    $petugasTI = $operasional->user ?? null;
-                    $ttdPetugasPath = null;
+                <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
+                    @php
+                        $petugasTI      = $operasional->user ?? null;
+                        $ttdPetugasPath = null;
 
-                    if ($petugasTI && $petugasTI->signature) {
-                        // Bersihkan path dari 'storage/' jika ada
-                        $signaturePath = str_replace('storage/', '', $petugasTI->signature);
-
-                        // Coba beberapa kemungkinan path
-                        $possiblePaths = [
-                            public_path('storage/' . $signaturePath),
-                            public_path($petugasTI->signature),
-                            public_path('storage/signatures/' . basename($petugasTI->signature)),
-                        ];
-
-                        foreach ($possiblePaths as $path) {
-                            if (file_exists($path)) {
-                                $ttdPetugasPath = $path;
-                                break;
-                            }
-                        }
-                    }
-                @endphp
-
-                @if($ttdPetugasPath && file_exists($ttdPetugasPath))
-                    <img src="{{ $ttdPetugasPath }}" alt="TTD Petugas TI" class="signature-img">
-                @endif
-            </div>
-
-            <div style="text-align: center; margin-top: 5px;">
-                <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
-                    <span style="font-size: 9px;">( <strong>{{ strtoupper($petugasTI->name ?? '-') }}</strong> )</span>
-                </span>
-            </div>
-        </td>
-
-        {{-- Staff Layanan TI - DINAMIS dari relasi staffIt --}}
-        <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
-            <div style="font-size: 9px; margin-bottom: 22px;">Staff Layanan TI</div>
-
-            <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
-                @php
-                    // Ambil Staff IT dari relasi Petugas TI
-                    $staffIT = null;
-                    $ttdStaffPath = null;
-
-                    if ($petugasTI) {
-                        $staffIT = $petugasTI->staffIt; // Relasi ke atasan (Staff IT)
-
-                        if ($staffIT && $staffIT->signature) {
-                            // Bersihkan path dari 'storage/' jika ada
-                            $signaturePath = str_replace('storage/', '', $staffIT->signature);
-
-                            // Coba beberapa kemungkinan path
-                            $possiblePaths = [
+                        if ($petugasTI && $petugasTI->signature) {
+                            $signaturePath  = str_replace('storage/', '', $petugasTI->signature);
+                            $possiblePaths  = [
                                 public_path('storage/' . $signaturePath),
-                                public_path($staffIT->signature),
-                                public_path('storage/signatures/' . basename($staffIT->signature)),
+                                public_path($petugasTI->signature),
+                                public_path('storage/signatures/' . basename($petugasTI->signature)),
                             ];
-
                             foreach ($possiblePaths as $path) {
-                                if (file_exists($path)) {
-                                    $ttdStaffPath = $path;
-                                    break;
-                                }
+                                if (file_exists($path)) { $ttdPetugasPath = $path; break; }
                             }
                         }
-                    }
-                @endphp
+                    @endphp
+                    @if($ttdPetugasPath)
+                        <img src="{{ $ttdPetugasPath }}" alt="TTD Petugas TI" class="signature-img">
+                    @endif
+                </div>
 
-                @if($ttdStaffPath && file_exists($ttdStaffPath))
-                    <img src="{{ $ttdStaffPath }}" alt="TTD Staff TI" class="signature-img">
+                <div style="text-align: center; margin-top: 5px;">
+                    <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
+                        <span style="font-size: 9px;">( <strong>{{ strtoupper($petugasTI->name ?? '-') }}</strong> )</span>
+                    </span>
+                </div>
+            </td>
+
+            {{-- Kolom 2: Staff Layanan TI (validator dari sistem validasi) --}}
+            <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
+                <div style="font-size: 9px; margin-bottom: 2px;">Mengetahui</div>
+                <div style="font-size: 9px; margin-bottom: 8px;">Staff Layanan TI</div>
+
+                <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
+                    @php
+                        // Gunakan $validated_by dari sistem validasi
+                        $ttdStaffPath = null;
+
+                        if ($is_validated && $validated_by && $validated_by->signature) {
+                            $signaturePath  = str_replace('storage/', '', $validated_by->signature);
+                            $possiblePaths  = [
+                                public_path('storage/' . $signaturePath),
+                                public_path($validated_by->signature),
+                                public_path('storage/signatures/' . basename($validated_by->signature)),
+                            ];
+                            foreach ($possiblePaths as $path) {
+                                if (file_exists($path)) { $ttdStaffPath = $path; break; }
+                            }
+                        }
+                    @endphp
+                    @if($ttdStaffPath)
+                        <img src="{{ $ttdStaffPath }}" alt="TTD Staff TI" class="signature-img">
+                    @endif
+                </div>
+
+                <div style="text-align: center; margin-top: 5px;">
+                    <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
+                        <span style="font-size: 9px;">( <strong>{{ strtoupper($is_validated ? ($validated_by->name ?? '-') : '-') }}</strong> )</span>
+                    </span>
+                </div>
+
+                @if($is_validated && $validated_at)
+                    <div style="font-size: 8px; color: #666; margin-top: 3px;">
+                    </div>
                 @endif
-            </div>
+            </td>
 
-            <div style="text-align: center; margin-top: 5px;">
-                <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
-                    <span style="font-size: 9px;">( <strong>{{ strtoupper($staffIT->name ?? '-') }}</strong> )</span>
-                </span>
-            </div>
-        </td>
+            {{-- Kolom 3: Penanggungjawab TI Cabang (static) --}}
+            <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
+                <div style="font-size: 9px; margin-bottom: 2px;">Mengetahui</div>
+                <div style="font-size: 9px; margin-bottom: 8px;">Penanggungjawab TI Cabang</div>
 
-        {{-- Penanggungjawab TI Cabang - Static (Susilo Wardoyo) --}}
-        <td style="width: 33.33%; text-align: center; border: none; vertical-align: top; padding: 0;">
-            <div style="font-size: 9px; margin-bottom: 2px;">Mengetahui</div>
-            <div style="font-size: 9px; margin-bottom: 8px;">Penanggungjawab TI Cabang</div>
+                <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
+                    @if(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo.png')))
+                        <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo.png') }}" alt="TTD PJ TI" class="signature-img">
+                    @elseif(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo.jpg')))
+                        <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo.jpg') }}" alt="TTD PJ TI" class="signature-img">
+                    @endif
+                </div>
 
-            <div style="text-align: center; height: 100px; line-height: 100px; margin: 5px 0;">
-                @if(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo.png')))
-                    <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo.png') }}" alt="TTD PJ TI" class="signature-img">
-                @elseif(file_exists(public_path('storage/signatures/ttd_Susilo_Wardoyo.jpg')))
-                    <img src="{{ public_path('storage/signatures/ttd_Susilo_Wardoyo.jpg') }}" alt="TTD PJ TI" class="signature-img">
-                @endif
-            </div>
-
-            <div style="text-align: center; margin-top: 5px;">
-                <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
-                    <span style="font-size: 9px;">( <strong>SUSILO WARDOYO</strong> )</span>
-                </span>
-            </div>
-        </td>
-    </tr>
-</table>
+                <div style="text-align: center; margin-top: 5px;">
+                    <span style="border-top: 1px solid #000; display: inline-block; padding-top: 3px; padding-left: 20px; padding-right: 20px;">
+                        <span style="font-size: 9px;">( <strong>SUSILO WARDOYO</strong> )</span>
+                    </span>
+                </div>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
