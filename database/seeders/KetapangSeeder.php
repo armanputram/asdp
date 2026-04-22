@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
-class DatabaseSeeder extends Seeder
+
+class KetapangSeeder extends Seeder
 {
     public function run()
     {
@@ -210,7 +210,7 @@ class DatabaseSeeder extends Seeder
         foreach ($perangkatDermaga as $p) {
             DB::table('perangkat')->insert([
                 'nama' => $p['nama'],
-                'qty' => $p['qty'], 
+                'qty' => $p['qty'],
                 'keterangan' => $p['keterangan'],
                 'cabang_id' => $cabangId,
                 'pelabuhan_id' => $pelabuhanId,
@@ -253,10 +253,10 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        $this->command->info('✅ Seeder berhasil dijalankan!');
-        $this->command->info('📍 Cabang: Ketapang');
-        $this->command->info('🚢 Pelabuhan: Ketapang');
-        $this->command->info('📦 Total: 6 Layanan, 67 Perangkat');
+        $this->command->info(' Seeder berhasil dijalankan!');
+        $this->command->info(' Cabang: Ketapang');
+        $this->command->info(' Pelabuhan: Ketapang');
+        $this->command->info(' Total: 6 Layanan, 67 Perangkat');
     }
 }
 
