@@ -152,74 +152,154 @@ class ExportDokumenResource extends Resource
                     }),
             ])
             ->actions([
-                Action::make('view')
-                    ->label('Lihat')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->url(fn (Operasional $record) => route('export.pdf', $record->id))
-                    ->openUrlInNewTab(),
+   Action::make('view')
+    ->label('Lihat')
+    ->icon('heroicon-o-eye')
+    ->color('info')
+    ->modalHeading(fn (Operasional $record) => 'Detail Operasional — ' . optional($record->pelabuhan)->nama)
+    ->modalWidth('7xl')
+    ->modalSubmitAction(false)
+    ->modalCancelActionLabel('Tutup')
+    ->extraModalFooterActions(fn (Action $action, Operasional $record): array => [
+        $action->makeModalSubmitAction('validasi', arguments: ['aksi' => 'validasi'])
+            ->label('Validasi Laporan')
+            ->color('warning')
+            ->icon('heroicon-o-shield-check')
+            ->visible(! $record->is_validated),
 
-                Action::make('validasi')
-                    ->label('Validasi')
-                    ->icon('heroicon-o-shield-check')
-                    ->color('warning')
-                    ->requiresConfirmation()
-                    ->modalHeading('Validasi Laporan')
-                    ->modalDescription('Tanda tangan Anda akan muncul pada PDF setelah divalidasi.')
-                    ->modalSubmitActionLabel('Ya, Validasi Sekarang')
-                    ->visible(fn (Operasional $record) => ! $record->is_validated)
-                    ->action(function (Operasional $record) {
-                        // Validasi semua operasional di pelabuhan + cabang + hari yang sama
-                        // mencakup semua user yang mengisi
-                        Operasional::where('pelabuhan_id', $record->pelabuhan_id)
-                            ->where('cabang_id', $record->cabang_id)
-                            ->whereDate('created_at', $record->created_at)
-                            ->update([
-                                'is_validated' => true,
-                                'validated_by' => auth()->id(),
-                                'validated_at' => now(),
-                            ]);
+        $action->makeModalSubmitAction('batalkan_validasi', arguments: ['aksi' => 'batalkan'])
+            ->label('Batalkan Validasi')
+            ->color('danger')
+            ->icon('heroicon-o-x-circle')
+            ->visible((bool) $record->is_validated),
+    ])
+    ->action(function (Operasional $record, array $arguments): void {
+        $aksi = $arguments['aksi'] ?? null;
 
-                        Notification::make()
-                            ->title('Laporan berhasil divalidasi')
-                            ->body('Sekarang laporan dapat diekspor ke PDF.')
-                            ->success()
-                            ->send();
-                    }),
+        if ($aksi === 'validasi') {
+            Operasional::where('pelabuhan_id', $record->pelabuhan_id)
+                ->where('cabang_id', $record->cabang_id)
+                ->whereDate('created_at', $record->created_at)
+                ->update([
+                    'is_validated' => true,
+                    'validated_by' => auth()->id(),
+                    'validated_at' => now(),
+                ]);
 
-                Action::make('batalkan_validasi')
-                    ->label('Batalkan Validasi')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Batalkan Validasi')
-                    ->modalDescription('Tanda tangan akan dihapus dan laporan tidak bisa diekspor sebelum divalidasi ulang.')
-                    ->modalSubmitActionLabel('Ya, Batalkan')
-                    ->visible(fn (Operasional $record) => (bool) $record->is_validated)
-                    ->action(function (Operasional $record) {
-                        Operasional::where('pelabuhan_id', $record->pelabuhan_id)
-                            ->where('cabang_id', $record->cabang_id)
-                            ->whereDate('created_at', $record->created_at)
-                            ->update([
-                                'is_validated' => false,
-                                'validated_by' => null,
-                                'validated_at' => null,
-                            ]);
+            Notification::make()
+                ->title('Laporan berhasil divalidasi')
+                ->body('Sekarang laporan dapat diekspor ke PDF.')
+                ->success()
+                ->send();
 
-                        Notification::make()
-                            ->title('Validasi dibatalkan')
-                            ->body('Laporan perlu divalidasi ulang sebelum bisa diekspor.')
-                            ->warning()
-                            ->send();
-                    }),
+        } elseif ($aksi === 'batalkan') {
+            Operasional::where('pelabuhan_id', $record->pelabuhan_id)
+                ->where('cabang_id', $record->cabang_id)
+                ->whereDate('created_at', $record->created_at)
+                ->update([
+                    'is_validated' => false,
+                    'validated_by' => null,
+                    'validated_at' => null,
+                ]);
 
-                Action::make('export_pdf')
-                    ->label('Export PDF')
-                    ->icon('heroicon-o-document-arrow-down')
-                    ->color('success')
-                    ->visible(fn (Operasional $record) => (bool) $record->is_validated)
-                    ->url(fn (Operasional $record) => route('export.pdf', $record->id))
-                    ->openUrlInNewTab(),
+            Notification::make()
+                ->title('Validasi dibatalkan')
+                ->body('Laporan perlu divalidasi ulang sebelum bisa diekspor.')
+                ->warning()
+                ->send();
+        }
+    })
+    ->modalContent(function (Operasional $record): \Illuminate\Contracts\View\View {
+
+        $groupedRecords = Operasional::where('pelabuhan_id', $record->pelabuhan_id)
+            ->where('cabang_id', $record->cabang_id)
+            ->whereDate('created_at', $record->created_at)
+            ->with(['layanan', 'items.perangkat', 'user'])
+            ->get();
+
+        $loketData = [];
+
+        foreach ($groupedRecords as $opRecord) {
+            $layananNama = optional($opRecord->layanan)->nama ?? 'Tidak Diketahui';
+            $userId      = $opRecord->user_id;
+            $userName    = optional($opRecord->user)->name ?? 'Unknown';
+
+            foreach ($opRecord->items as $item) {
+                $loket = $item->qty_check ?? '?';
+                $key   = $loket . '||' . $layananNama;
+
+                if (! isset($loketData[$key])) {
+                    $loketData[$key] = [
+                        'loket'   => $loket,
+                        'layanan' => $layananNama,
+                        'petugas' => [],
+                    ];
+                }
+
+                if (! isset($loketData[$key]['petugas'][$userId])) {
+                    $loketData[$key]['petugas'][$userId] = [
+                        'nama_petugas' => $userName,
+                        'items'        => [],
+                    ];
+                }
+
+                $loketData[$key]['petugas'][$userId]['items'][] = [
+                    'perangkat' => optional($item->perangkat)->nama ?? '-',
+                    'status'    => $item->status_perangkat,
+                    'catatan'   => $item->catatan,
+                    'foto'      => $item->foto ? url('storage/' . $item->foto) : null,
+                ];
+            }
+        }
+
+        uksort($loketData, function ($a, $b) {
+            [$loketA, $layananA] = explode('||', $a);
+            [$loketB, $layananB] = explode('||', $b);
+            $layananCompare = strcmp($layananA, $layananB);
+            if ($layananCompare !== 0) return $layananCompare;
+            return (int) $loketA <=> (int) $loketB;
+        });
+
+        $dikerjakanPerLayanan = [];
+        foreach ($groupedRecords as $opRecord) {
+            $lid = $opRecord->layanan_id;
+            if (! isset($dikerjakanPerLayanan[$lid])) {
+                $dikerjakanPerLayanan[$lid] = [];
+            }
+            foreach ($opRecord->items as $item) {
+                $dikerjakanPerLayanan[$lid][$item->perangkat_id] = true;
+            }
+        }
+
+        $belumDikerjakan = [];
+        foreach ($groupedRecords->unique('layanan_id') as $opRecord) {
+            if (! $opRecord->layanan_id) continue;
+            $layananNama = optional($opRecord->layanan)->nama ?? 'Tidak Diketahui';
+            $sudahIds    = array_keys($dikerjakanPerLayanan[$opRecord->layanan_id] ?? []);
+            $query       = \App\Models\Perangkat::where('layanan_id', $opRecord->layanan_id);
+            if (! empty($sudahIds)) {
+                $query->whereNotIn('id', $sudahIds);
+            }
+            $belum = $query->pluck('nama')->toArray();
+            if (! empty($belum)) {
+                $belumDikerjakan[$layananNama] = $belum;
+            }
+        }
+
+        return view('filament.modals.view-operasional', [
+            'record'          => $record,
+            'loketData'       => $loketData,
+            'belumDikerjakan' => $belumDikerjakan,
+            'canValidate'     => auth()->user()->can('validate_operasional'),
+        ]);
+    }),
+Action::make('export_pdf')
+    ->label('Export PDF')
+    ->icon('heroicon-o-document-arrow-down')
+    ->color('success')
+    ->visible(fn (Operasional $record) => (bool) $record->is_validated)
+    ->url(fn (Operasional $record) => route('export.pdf', $record->id))
+    ->openUrlInNewTab(),
 
                 Action::make('export_pdf_locked')
                     ->label('Export PDF')

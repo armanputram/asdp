@@ -119,7 +119,7 @@ class ListOperasionals extends ListRecords
             ->query($this->getTableQuery())
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
-                    ->label('User')
+                    ->label('Nama')
                     ->searchable()
                     ->sortable(),
 

@@ -37,7 +37,7 @@ class Layanan extends Model
     {
         return $this->hasMany(Operasional::class);
     }
-    
+
 
 
 }

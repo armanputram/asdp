@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OperasionalPdfController;
 
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes - PDF Export Routes
@@ -14,7 +15,8 @@ Route::get('/export-pdf/{id}', [OperasionalPdfController::class, 'exportPdf'])
     ->name('export.pdf');
 
 // Route: Export PDF berdasarkan Pelabuhan
-Route::get('/export-pdf-pelabuhan/{pelabuhanId}', [OperasionalPdfController::class, 'exportPdfByPelabuhan'])
+Route::get('/export-pdf-pelabu
+han/{pelabuhanId}', [OperasionalPdfController::class, 'exportPdfByPelabuhan'])
     ->name('export.pdf.pelabuhan');
 
 // Route: Export PDF dengan tanggal custom
@@ -25,6 +27,9 @@ Route::get('/export-pdf-custom/{id}/{tanggal?}/{waktu?}', [OperasionalPdfControl
 Route::get('/download-pdf/{id}', [OperasionalPdfController::class, 'downloadPdf'])
     ->name('download.pdf');
 
+Route::post('/operasional/{operasional}/validasi', [OperasionalPdfController::class, 'toggleValidasi'])
+    ->middleware(['auth'])
+    ->name('operasional.validasi');
 /*
 |--------------------------------------------------------------------------
 | Homepage Route

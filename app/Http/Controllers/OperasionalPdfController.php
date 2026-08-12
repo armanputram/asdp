@@ -6,6 +6,7 @@ use App\Models\Operasional;
 use App\Models\Layanan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 
 class OperasionalPdfController extends Controller
 {
@@ -287,4 +288,71 @@ class OperasionalPdfController extends Controller
             return response("Error: " . $e->getMessage(), 500);
         }
     }
+public function toggleValidasi(Request $request, Operasional $operasional)
+{
+    $aksi    = $request->input('aksi');
+    $confirm = $request->boolean('confirm', false); // flag konfirmasi dari user
+
+    if (! in_array($aksi, ['validasi', 'batalkan'])) {
+        return response()->json(['success' => false, 'message' => 'Aksi tidak valid.'], 422);
+    }
+
+    // ── Cek belum dikerjakan (hanya saat validasi, dan belum konfirmasi) ──
+    if ($aksi === 'validasi' && ! $confirm) {
+
+        $groupedRecords = Operasional::where('pelabuhan_id', $operasional->pelabuhan_id)
+            ->where('cabang_id', $operasional->cabang_id)
+            ->whereDate('created_at', $operasional->created_at->format('Y-m-d'))
+            ->with(['items', 'layanan'])
+            ->get();
+
+        $dikerjakanPerLayanan = [];
+        foreach ($groupedRecords as $opRecord) {
+            if (! $opRecord->layanan_id) continue;
+            foreach ($opRecord->items as $item) {
+                $dikerjakanPerLayanan[$opRecord->layanan_id][$item->perangkat_id] = true;
+            }
+        }
+
+        $belumDikerjakan = [];
+        foreach ($groupedRecords->unique('layanan_id') as $opRecord) {
+            if (! $opRecord->layanan_id) continue;
+            $layananNama = optional($opRecord->layanan)->nama ?? 'Tidak Diketahui';
+            $sudahIds    = array_keys($dikerjakanPerLayanan[$opRecord->layanan_id] ?? []);
+            $query       = \App\Models\Perangkat::where('layanan_id', $opRecord->layanan_id);
+            if (! empty($sudahIds)) {
+                $query->whereNotIn('id', $sudahIds);
+            }
+            $belum = $query->pluck('nama')->toArray();
+            if (! empty($belum)) {
+                $belumDikerjakan[$layananNama] = $belum;
+            }
+        }
+
+        // Ada yang belum → kembalikan warning, minta konfirmasi
+        if (! empty($belumDikerjakan)) {
+            return response()->json([
+                'success'          => false,
+                'need_confirm'     => true,
+                'belum_dikerjakan' => $belumDikerjakan,
+            ]);
+        }
+    }
+
+    // ── Proses validasi / batalkan ──────────────────────────────────────
+    Operasional::where('pelabuhan_id', $operasional->pelabuhan_id)
+        ->where('cabang_id', $operasional->cabang_id)
+        ->whereDate('created_at', $operasional->created_at->format('Y-m-d'))
+        ->update($aksi === 'validasi' ? [
+            'is_validated' => true,
+            'validated_by' => auth()->id(),
+            'validated_at' => now(),
+        ] : [
+            'is_validated' => false,
+            'validated_by' => null,
+            'validated_at' => null,
+        ]);
+
+    return response()->json(['success' => true]);
+}
 }
